@@ -1,0 +1,89 @@
+{
+  "config": {
+    "abort": {
+      "single_instance_allowed": "GrowSolar e deja configurat. Îl modifici din Configure."
+    },
+    "step": {
+      "user": {
+        "title": "Sursa datelor",
+        "description": "De unde citește GrowSolar sistemul solar?\n\nGăsite acum: invertoare DongleGrowatt: {dongle}, invertoare Solar Assistant: {sa}.",
+        "data": {
+          "source": "Sursa"
+        }
+      },
+      "settings": {
+        "title": "Sistem",
+        "description": "Invertoare găsite: {detected}. Prețul se folosește pentru economiile din Totals.",
+        "data": {
+          "title": "Nume în bara laterală",
+          "inverters": "Număr de invertoare",
+          "battery_kwh": "Capacitatea bateriei",
+          "pv_kwp": "Puterea panourilor (0 = necunoscută)",
+          "price": "Preț energie pe kWh",
+          "currency": "Monedă"
+        }
+      },
+      "manual": {
+        "title": "Entități",
+        "description": "Alege senzorii. Puteri în W (baterie: pozitiv la încărcare), contoare de energie în kWh.",
+        "data": {
+          "pv": "Putere solară",
+          "load": "Consum",
+          "bat_w": "Putere baterie (+ încărcare)",
+          "grid_w": "Putere rețea (+ import)",
+          "soc": "Starea de încărcare a bateriei",
+          "bat_v": "Tensiune baterie",
+          "grid_v": "Tensiune rețea",
+          "energy_pv": "Energie solară",
+          "energy_load": "Energie consumată",
+          "energy_grid_in": "Energie din rețea",
+          "energy_bat_in": "Energie încărcată în baterie",
+          "energy_bat_out": "Energie descărcată din baterie"
+        }
+      }
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "GrowSolar",
+        "description": "Sursa: {source}. Invertoare găsite: {detected}. Negăsite: {missing}.",
+        "data": {
+          "title": "Nume în bara laterală",
+          "inverters": "Număr de invertoare",
+          "battery_kwh": "Capacitatea bateriei",
+          "pv_kwp": "Puterea panourilor (0 = necunoscută)",
+          "price": "Preț energie pe kWh",
+          "currency": "Monedă"
+        }
+      },
+      "manual": {
+        "title": "Entități suplimentare",
+        "description": "Opțional: entități care le înlocuiesc sau le completează pe cele găsite automat.",
+        "data": {
+          "pv": "Putere solară",
+          "load": "Consum",
+          "bat_w": "Putere baterie (+ încărcare)",
+          "grid_w": "Putere rețea (+ import)",
+          "soc": "Starea de încărcare a bateriei",
+          "bat_v": "Tensiune baterie",
+          "grid_v": "Tensiune rețea",
+          "energy_pv": "Energie solară",
+          "energy_load": "Energie consumată",
+          "energy_grid_in": "Energie din rețea",
+          "energy_bat_in": "Energie încărcată în baterie",
+          "energy_bat_out": "Energie descărcată din baterie"
+        }
+      }
+    }
+  },
+  "selector": {
+    "source": {
+      "options": {
+        "donglegrowatt": "DongleGrowatt (pachetele Growatt-SPF6K-HA)",
+        "solar_assistant": "Solar Assistant (MQTT)",
+        "manual": "Aleg eu senzorii"
+      }
+    }
+  }
+}

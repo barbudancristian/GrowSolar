@@ -1,0 +1,89 @@
+{
+  "config": {
+    "abort": {
+      "single_instance_allowed": "GrowSolar is already set up. Change it from Configure."
+    },
+    "step": {
+      "user": {
+        "title": "Data source",
+        "description": "Where should GrowSolar read the solar system from?\n\nFound now: DongleGrowatt inverters: {dongle}, Solar Assistant inverters: {sa}.",
+        "data": {
+          "source": "Source"
+        }
+      },
+      "settings": {
+        "title": "System",
+        "description": "Inverters found: {detected}. Prices are used for the savings in Totals.",
+        "data": {
+          "title": "Name in the sidebar",
+          "inverters": "Number of inverters",
+          "battery_kwh": "Battery capacity",
+          "pv_kwp": "Solar array size (0 = unknown)",
+          "price": "Energy price per kWh",
+          "currency": "Currency"
+        }
+      },
+      "manual": {
+        "title": "Entities",
+        "description": "Choose the sensors to use. Power in W (battery: positive while charging), energy counters in kWh.",
+        "data": {
+          "pv": "Solar power",
+          "load": "Load power",
+          "bat_w": "Battery power (+ charging)",
+          "grid_w": "Grid power (+ import)",
+          "soc": "Battery state of charge",
+          "bat_v": "Battery voltage",
+          "grid_v": "Grid voltage",
+          "energy_pv": "Solar energy",
+          "energy_load": "Load energy",
+          "energy_grid_in": "Energy from grid",
+          "energy_bat_in": "Battery energy charged",
+          "energy_bat_out": "Battery energy discharged"
+        }
+      }
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "GrowSolar",
+        "description": "Source: {source}. Inverters found: {detected}. Not found: {missing}.",
+        "data": {
+          "title": "Name in the sidebar",
+          "inverters": "Number of inverters",
+          "battery_kwh": "Battery capacity",
+          "pv_kwp": "Solar array size (0 = unknown)",
+          "price": "Energy price per kWh",
+          "currency": "Currency"
+        }
+      },
+      "manual": {
+        "title": "Extra entities",
+        "description": "Optional: entities that replace or add to the ones found automatically.",
+        "data": {
+          "pv": "Solar power",
+          "load": "Load power",
+          "bat_w": "Battery power (+ charging)",
+          "grid_w": "Grid power (+ import)",
+          "soc": "Battery state of charge",
+          "bat_v": "Battery voltage",
+          "grid_v": "Grid voltage",
+          "energy_pv": "Solar energy",
+          "energy_load": "Load energy",
+          "energy_grid_in": "Energy from grid",
+          "energy_bat_in": "Battery energy charged",
+          "energy_bat_out": "Battery energy discharged"
+        }
+      }
+    }
+  },
+  "selector": {
+    "source": {
+      "options": {
+        "donglegrowatt": "DongleGrowatt (Growatt-SPF6K-HA packages)",
+        "solar_assistant": "Solar Assistant (MQTT)",
+        "manual": "Choose the sensors myself"
+      }
+    }
+  }
+}
