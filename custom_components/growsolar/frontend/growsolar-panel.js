@@ -7,7 +7,7 @@
  * SPDX-License-Identifier: MIT
  */
 (() => {
-const VERSION = '0.1.0';
+const VERSION = '0.1.1';
 
 /* ------------------------------------------------------------------ texts */
 const STR = {
@@ -362,7 +362,9 @@ class GrowSolarPanel extends HTMLElement {
     const out = {};
     for (const k of keys) for (const id of en[k]) for (const row of r[id] || []) {
       const t = toMs(row.start), o = (out[t] = out[t] || {});
-      if (isNum(row.change)) o[k] = (o[k] || 0) + row.change;
+      // a negative change is not energy: the statistic's sum was restarted (for example after
+      // the sensor was excluded from the recorder for a while), so that period is unknown
+      if (isNum(row.change) && row.change >= 0) o[k] = (o[k] || 0) + row.change;
     }
     return out;
   }
@@ -383,6 +385,21 @@ class GrowSolarPanel extends HTMLElement {
       total += e; any = true;
     }
     return any ? total : NaN;
+  }
+  /* energy since midnight: counters that reset daily already hold it; cumulative ones need history */
+  async energyToday(key) {
+    const ids = this.en[key] || [];
+    if (!ids.length) return NaN;
+    if (this._map.energy_daily_reset) return sum(ids.map((id) => this.num(id)));
+    return this.energyBetween(key, startOfDay(Date.now()), Date.now());
+  }
+  /* energy of one past day, from history, falling back to the daily statistics */
+  async energyDay(key, day0) {
+    let v = NaN;
+    try { v = await this.energyBetween(key, day0, day0 + DAY); } catch (e) { v = NaN; }
+    if (isNum(v) && v > 0) return v;
+    try { const st = await this.energyStats(day0, day0 + DAY, 'day'); const row = st[day0] || this._near(st, day0); if (row && isNum(row[key])) return row[key]; } catch (e) { /* ignore */ }
+    return v;
   }
   async solarForecast() {
     if (this._fcCache && Date.now() - this._fcCache.t < 15 * 60e3) return this._fcCache.v;
@@ -607,8 +624,8 @@ class GrowSolarPanel extends HTMLElement {
     try {
       const [h, gen, yest, fc] = await Promise.all([
         this.history([...pvIds, ...fcIds, ...clIds], t0, t1),
-        this.energyBetween('pv', day0, day1),
-        this.energyBetween('pv', day0 - DAY, day0),
+        isToday ? this.energyToday('pv') : this.energyDay('pv', day0),
+        this.energyDay('pv', day0 - DAY),
         this.solarForecast()
       ]);
       const pv = this.seriesData(h, pvIds, pvHow, t0, t1, n);
@@ -800,6 +817,24 @@ class GrowSolarPanel extends HTMLElement {
       const rows = [];
       if (period === 'day') for (let t = t0; t < t1 && t <= Date.now(); t += DAY) { const ts = startOfDay(t + 3600e3); rows.push({ t: ts, values: st[ts] || this._near(st, ts) || {} }); }
       else for (let i = 0; i < 12; i++) { const d = new Date(new Date(t0).getFullYear(), new Date(t0).getMonth() + i, 1); if (d.getTime() > Date.now()) break; rows.push({ t: d.getTime(), values: st[d.getTime()] || this._near(st, d.getTime()) || {} }); }
+      const today = startOfDay(Date.now());
+      const keysAll = Object.keys(this.en).filter((k) => (this.en[k] || []).length);
+      const live = {};
+      for (const k of keysAll) { try { live[k] = await this.energyToday(k); } catch (e) { live[k] = NaN; } }
+      for (const r of rows) {
+        const isCur = period === 'day' ? r.t === today : r.t === new Date(new Date().getFullYear(), new Date().getMonth(), 1).getTime();
+        if (!isCur) continue;
+        for (const k of keysAll) {
+          if (!isNum(live[k])) continue;
+          // the statistics of the current hour are not compiled yet: take today from the counters
+          if (period === 'day') r.values[k] = live[k];
+          else {
+            const st2 = await this.energyStats(r.t, today, 'day').catch(() => ({}));
+            let before = 0; for (const row of Object.values(st2)) if (isNum(row[k])) before += row[k];
+            r.values[k] = before + live[k];
+          }
+        }
+      }
       for (const r of rows) {
         const d = new Date(r.t);
         r.label = period === 'day' ? d.toLocaleDateString(this.lang, { weekday: 'short', day: 'numeric', month: 'short' }) : d.toLocaleDateString(this.lang, { month: 'long', year: 'numeric' });
