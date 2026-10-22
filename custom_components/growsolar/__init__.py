@@ -1,0 +1,102 @@
+"""GrowSolar: a solar dashboard panel for Growatt SPF systems in Home Assistant."""
+from __future__ import annotations
+
+import logging
+from pathlib import Path
+
+from homeassistant.components import frontend, panel_custom
+from homeassistant.components.http import StaticPathConfig
+from homeassistant.config_entries import ConfigEntry
+from homeassistant.core import HomeAssistant
+from homeassistant.helpers import entity_registry as er
+import homeassistant.helpers.config_validation as cv
+
+from .const import (
+    CONF_BATTERY_KWH,
+    CONF_CURRENCY,
+    CONF_INVERTERS,
+    CONF_MANUAL,
+    CONF_PRICE,
+    CONF_PV_KWP,
+    CONF_SOURCE,
+    CONF_TITLE,
+    DOMAIN,
+    PANEL_ELEMENT,
+    PANEL_URL,
+    STATIC_URL,
+    VERSION,
+)
+from .mapping import build_map
+
+_LOGGER = logging.getLogger(__name__)
+
+CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
+
+
+def mqtt_unique_ids(hass: HomeAssistant) -> dict[str, str]:
+    """unique_id -> entity_id for every MQTT sensor in the entity registry."""
+    reg = er.async_get(hass)
+    return {
+        e.unique_id: e.entity_id
+        for e in reg.entities.values()
+        if e.platform == "mqtt" and e.domain == "sensor" and e.disabled_by is None
+    }
+
+
+def entry_settings(entry: ConfigEntry) -> dict:
+    """Settings from the entry, options winning over the original data."""
+    return {**entry.data, **entry.options}
+
+
+async def _register_static(hass: HomeAssistant) -> None:
+    if hass.data.get(f"{DOMAIN}_static"):
+        return
+    path = Path(__file__).parent / "frontend"
+    await hass.http.async_register_static_paths(
+        [StaticPathConfig(STATIC_URL, str(path), cache_headers=False)]
+    )
+    hass.data[f"{DOMAIN}_static"] = True
+
+
+async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+    """Register the GrowSolar panel."""
+    await _register_static(hass)
+    s = entry_settings(entry)
+    entity_map = build_map(
+        s[CONF_SOURCE], mqtt_unique_ids(hass), int(s[CONF_INVERTERS]), s.get(CONF_MANUAL)
+    )
+    title = s.get(CONF_TITLE) or "GrowSolar"
+    if PANEL_URL in hass.data.get("frontend_panels", {}):
+        frontend.async_remove_panel(hass, PANEL_URL)
+    await panel_custom.async_register_panel(
+        hass,
+        webcomponent_name=PANEL_ELEMENT,
+        frontend_url_path=PANEL_URL,
+        module_url=f"{STATIC_URL}/growsolar-panel.js?v={VERSION}",
+        sidebar_title=title,
+        sidebar_icon="mdi:solar-power-variant",
+        require_admin=False,
+        embed_iframe=False,
+        config={
+            "version": VERSION,
+            "title": title,
+            "map": entity_map,
+            "battery_kwh": float(s.get(CONF_BATTERY_KWH) or 0),
+            "pv_kwp": float(s.get(CONF_PV_KWP) or 0),
+            "price": float(s.get(CONF_PRICE) or 0),
+            "currency": s.get(CONF_CURRENCY) or "RON",
+        },
+    )
+    entry.async_on_unload(entry.add_update_listener(_async_reload))
+    _LOGGER.debug("GrowSolar panel registered with %s", entity_map)
+    return True
+
+
+async def _async_reload(hass: HomeAssistant, entry: ConfigEntry) -> None:
+    await hass.config_entries.async_reload(entry.entry_id)
+
+
+async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+    """Remove the panel."""
+    frontend.async_remove_panel(hass, PANEL_URL)
+    return True

@@ -1,0 +1,14 @@
+{
+  "domain": "growsolar",
+  "name": "GrowSolar",
+  "codeowners": ["@barbudancristian"],
+  "config_flow": true,
+  "dependencies": ["frontend", "http", "panel_custom", "recorder"],
+  "documentation": "https://github.com/barbudancristian/GrowSolar",
+  "integration_type": "service",
+  "iot_class": "calculated",
+  "issue_tracker": "https://github.com/barbudancristian/GrowSolar/issues",
+  "requirements": [],
+  "single_config_entry": true,
+  "version": "0.1.0"
+}
