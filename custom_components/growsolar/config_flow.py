@@ -80,6 +80,10 @@ def _manual_schema(defaults: dict) -> vol.Schema:
         fields[vol.Optional(key, description={"suggested_value": defaults.get(key)})] = (
             selector.EntitySelector(selector.EntitySelectorConfig(domain="sensor", device_class=dc))
         )
+    # weather entity for the cloud forecast on the "PV today" chart (default: the first one found)
+    fields[vol.Optional("weather", description={"suggested_value": defaults.get("weather")})] = (
+        selector.EntitySelector(selector.EntitySelectorConfig(domain="weather"))
+    )
     return vol.Schema(fields)
 
 

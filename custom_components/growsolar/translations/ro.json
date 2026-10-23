@@ -38,7 +38,8 @@
           "energy_load": "Energie consumată",
           "energy_grid_in": "Energie din rețea",
           "energy_bat_in": "Energie încărcată în baterie",
-          "energy_bat_out": "Energie descărcată din baterie"
+          "energy_bat_out": "Energie descărcată din baterie",
+          "weather": "Vreme (prognoza norilor)"
         }
       }
     }
@@ -72,7 +73,8 @@
           "energy_load": "Energie consumată",
           "energy_grid_in": "Energie din rețea",
           "energy_bat_in": "Energie încărcată în baterie",
-          "energy_bat_out": "Energie descărcată din baterie"
+          "energy_bat_out": "Energie descărcată din baterie",
+          "weather": "Vreme (prognoza norilor)"
         }
       }
     }

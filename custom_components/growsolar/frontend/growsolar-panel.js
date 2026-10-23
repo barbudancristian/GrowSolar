@@ -7,14 +7,14 @@
  * SPDX-License-Identifier: MIT
  */
 (() => {
-const VERSION = '0.1.1';
+const VERSION = '0.1.2';
 
 /* ------------------------------------------------------------------ texts */
 const STR = {
   en: {
     dashboard: 'Dashboard', charts: 'Charts', totals: 'Totals', inverters: 'Inverters', battery: 'Battery',
     inverter: 'Inverter', solar: 'Solar PV', grid: 'Grid', load: 'Load', mode: 'mode',
-    today: 'Today', peak: 'Peak', present: 'present', absent: 'absent', perHour: '%/h',
+    today: 'Today', peak: 'Peak', present: 'present', absent: 'absent', perHour: '%/h', socRate: 'Charge rate',
     pvToday: 'PV today', yesterday: 'Yesterday', generated: 'Generated', remaining: 'Remaining', tomorrow: 'Tomorrow',
     predicted: 'Predicted', now: 'Now', cloud: 'Cloud cover', overview: 'Overview', last24: 'last 24 hours',
     batteryPower: 'Battery power', soc: 'State of charge', batteryVoltage: 'Battery voltage',
@@ -38,7 +38,7 @@ const STR = {
   ro: {
     dashboard: 'Dashboard', charts: 'Grafice', totals: 'Totaluri', inverters: 'Invertoare', battery: 'Baterie',
     inverter: 'Invertor', solar: 'Solar', grid: 'Rețea', load: 'Consum', mode: 'mod',
-    today: 'Azi', peak: 'Vârf', present: 'prezentă', absent: 'absentă', perHour: '%/h',
+    today: 'Azi', peak: 'Vârf', present: 'prezentă', absent: 'absentă', perHour: '%/h', socRate: 'Ritm de încărcare',
     pvToday: 'Solar azi', yesterday: 'Ieri', generated: 'Produs', remaining: 'Rămas', tomorrow: 'Mâine',
     predicted: 'Prognoză', now: 'Acum', cloud: 'Nori', overview: 'Privire de ansamblu', last24: 'ultimele 24 de ore',
     batteryPower: 'Putere baterie', soc: 'Stare de încărcare', batteryVoltage: 'Tensiune baterie',
@@ -62,6 +62,9 @@ const STR = {
 };
 
 const COL = { pv: '#ffb02e', load: '#4aa3ff', bat: '#35d07f', grid: '#b284ff', bad: '#ff5d6c', fc: '#ffd166', cloud: '#8fa0c8', v: '#5ad1e6' };
+const WX_ICON = { sunny: 'mdi:weather-sunny', 'clear-night': 'mdi:weather-night', partlycloudy: 'mdi:weather-partly-cloudy', cloudy: 'mdi:weather-cloudy',
+  rainy: 'mdi:weather-rainy', pouring: 'mdi:weather-pouring', fog: 'mdi:weather-fog', hail: 'mdi:weather-hail', lightning: 'mdi:weather-lightning',
+  'lightning-rainy': 'mdi:weather-lightning-rainy', snowy: 'mdi:weather-snowy', 'snowy-rainy': 'mdi:weather-snowy-rainy', windy: 'mdi:weather-windy', 'windy-variant': 'mdi:weather-windy-variant', exceptional: 'mdi:alert-circle-outline' };
 const INV_COL = ['#ffb02e', '#4aa3ff', '#35d07f', '#b284ff', '#ff7aa8', '#5ad1e6'];
 
 /* ------------------------------------------------------------------ helpers */
@@ -173,6 +176,8 @@ nav button.on,.seg button.on{background:#2c4fa8;border-color:#4a6fd0;color:#fff}
 .arrow{padding:4px 10px}
 .chart{position:relative;width:100%}
 .chart svg{display:block;width:100%;height:auto;overflow:visible}
+.wxrow{position:absolute;top:2px;left:0;right:0;height:28px;pointer-events:none}
+.wxrow ha-icon{position:absolute;transform:translateX(-50%);--mdc-icon-size:22px;color:#b9c6e6}
 .tip{position:absolute;pointer-events:none;background:#0d1a3a;border:1px solid #33497e;border-radius:10px;padding:7px 10px;font-size:12px;white-space:nowrap;z-index:5;display:none;box-shadow:0 6px 20px rgba(0,0,0,.35)}
 .tip div{display:flex;gap:8px;align-items:center}.tip i{width:9px;height:9px;border-radius:2px;display:inline-block}
 .tip b{margin-left:auto;padding-left:12px;font-variant-numeric:tabular-nums}
@@ -395,10 +400,24 @@ class GrowSolarPanel extends HTMLElement {
   }
   /* energy of one past day, from history, falling back to the daily statistics */
   async energyDay(key, day0) {
-    let v = NaN;
-    try { v = await this.energyBetween(key, day0, day0 + DAY); } catch (e) { v = NaN; }
-    if (isNum(v) && v > 0) return v;
+    // the daily statistics are complete even where the detailed history is missing
     try { const st = await this.energyStats(day0, day0 + DAY, 'day'); const row = st[day0] || this._near(st, day0); if (row && isNum(row[key])) return row[key]; } catch (e) { /* ignore */ }
+    try { return await this.energyBetween(key, day0, day0 + DAY); } catch (e) { return NaN; }
+  }
+  /* hourly weather forecast: [{t, cloud, cond}] from the weather entity chosen in the setup,
+     or the first weather entity in Home Assistant */
+  async weatherForecast() {
+    if (this._wxCache && Date.now() - this._wxCache.t < 30 * 60e3) return this._wxCache.v;
+    let v = null;
+    const id = this.sys.weather || Object.keys(this._hass.states).find((e) => e.startsWith('weather.'));
+    if (id) {
+      try {
+        const r = await this.ws({ type: 'call_service', domain: 'weather', service: 'get_forecasts', service_data: { type: 'hourly' }, target: { entity_id: id }, return_response: true });
+        const f = (((r && r.response) || {})[id] || {}).forecast || [];
+        v = f.map((x) => ({ t: Date.parse(x.datetime), cloud: x.cloud_coverage, cond: x.condition })).filter((x) => isFinite(x.t));
+      } catch (e) { v = null; }
+    }
+    this._wxCache = { t: Date.now(), v };
     return v;
   }
   async solarForecast() {
@@ -408,7 +427,10 @@ class GrowSolarPanel extends HTMLElement {
       const r = await this.ws({ type: 'energy/solar_forecast' });
       const wh = {};
       for (const e of Object.values(r || {})) for (const [k, w] of Object.entries(e.wh_hours || {})) wh[k] = (wh[k] || 0) + w;
-      v = Object.keys(wh).length ? Object.entries(wh).map(([k, w]) => [Date.parse(k), w]).sort((a, b) => a[0] - b[0]) : null;
+      const pts = Object.entries(wh).map(([k, w]) => [Date.parse(k), w]).sort((a, b) => a[0] - b[0]);
+      // interval of the forecast (Solcast: 30 min, Forecast.Solar: 1 h)
+      let iv = 3600e3; for (let i = 1; i < pts.length; i++) { const d = pts[i][0] - pts[i - 1][0]; if (d > 0) { iv = Math.min(iv, d); } }
+      v = pts.length ? pts.map(([t, w]) => [t, w, iv]) : null;
     } catch (e) { v = null; }
     this._fcCache = { t: Date.now(), v };
     return v;
@@ -424,7 +446,7 @@ class GrowSolarPanel extends HTMLElement {
   }
   _draw(host) {
     const cfg = host._cfg, W = Math.max(280, host.clientWidth || 600), H = cfg.height || (W < 500 ? 190 : 230);
-    const m = { l: 46, r: cfg.unitR ? 44 : 14, t: 10, b: 26 };
+    const m = { l: 46, r: cfg.unitR ? 44 : 14, t: cfg.icons && cfg.icons.length ? 36 : 10, b: 26 };
     const vis = cfg.series.filter((s) => !this._hidden[cfg.id + s.name] && s.data);
     const left = vis.filter((s) => !s.right), right = vis.filter((s) => s.right);
     const range = (list, zero) => {
@@ -483,6 +505,14 @@ class GrowSolarPanel extends HTMLElement {
     o += `<line class="cur" y1="${m.t}" y2="${H - m.b}" stroke="#fff" stroke-opacity=".45" style="display:none"/>`;
     o += `<rect class="hit" x="${m.l}" y="${m.t}" width="${W - m.l - m.r}" height="${H - m.t - m.b}" fill="transparent"/></svg><div class="tip"></div>`;
     host.innerHTML = o;
+    if (cfg.icons && cfg.icons.length) {
+      // weather icons along the top of the chart (Home Assistant's own icon element)
+      const ic = document.createElement('div');
+      ic.className = 'wxrow';
+      ic.innerHTML = cfg.icons.filter((x) => x.t >= cfg.t0 && x.t <= cfg.t1)
+        .map((x) => `<ha-icon icon="${esc(x.icon)}" title="${esc(x.title || '')}" style="left:${(XT(x.t) / W * 100).toFixed(2)}%"></ha-icon>`).join('');
+      host.appendChild(ic);
+    }
     if (cfg.legend !== false) {
       const lg = document.createElement('div'); lg.className = 'legend';
       lg.innerHTML = cfg.series.filter((s) => s.data).map((s) => `<span data-n="${esc(s.name)}" class="${this._hidden[cfg.id + s.name] ? 'off' : ''}"><i class="${s.dash ? 'd' : ''}" style="--c:${s.color};background:${s.color}"></i>${esc(s.name)}</span>`).join('');
@@ -574,7 +604,7 @@ class GrowSolarPanel extends HTMLElement {
           <div><div class="v" id="pv_g">–</div><div class="k">${this.t('generated')}</div></div>
           <div class="bar"><i id="pv_bar" style="width:0"></i></div>
           <div><div class="v" id="pv_r">–</div><div class="k">${this.t('remaining')}</div></div>
-          <div class="dim"><div class="v" id="pv_t">–</div><div class="k">${this.t('tomorrow')}</div></div>
+          <div class="dim"><div class="v" id="pv_t">–</div><div class="k" id="pv_tl">${this.t('tomorrow')}</div></div>
         </div>
         <div id="c_pvday"></div>
         <h2 style="margin-top:18px">${this.t('overview')} <span style="text-transform:none;letter-spacing:0">· ${this.t('last24')}</span></h2>
@@ -600,7 +630,14 @@ class GrowSolarPanel extends HTMLElement {
     o += `<text x="100" y="84" class="gv">${fmtW(value)}</text><text x="100" y="106" class="gl">${esc(label)}</text></svg>`;
     el.innerHTML = o;
   }
+  /* how fast the battery charges or discharges, in % of the capacity per hour, from the battery power */
+  socRate() {
+    const bw = this.liveVal('bat'), bv = this.liveVal('batv'), ah = this.num(this.sys.capacity_ah);
+    const kwh = this._cfg.battery_kwh || (isNum(ah) && isNum(bv) ? ah * bv / 1000 : NaN);
+    return isNum(bw) && kwh > 0 ? bw / (kwh * 1000) * 100 : NaN;
+  }
   async _loadSocRate() {
+    if (isNum(this.socRate())) return;   // shown live from the battery power
     const [ids, how] = this.spec('soc');
     if (!ids.length) return;
     try {
@@ -615,49 +652,68 @@ class GrowSolarPanel extends HTMLElement {
     } catch (e) { /* ignore */ }
   }
   async _loadPvDay() {
-    const day0 = startOfDay(Date.now()) + this._pvDay * DAY, day1 = day0 + DAY, isToday = this._pvDay === 0;
+    const day0 = startOfDay(Date.now()) + this._pvDay * DAY, day1 = day0 + DAY, isToday = this._pvDay === 0, now = Date.now();
     const ttl = this.$('#pv_title'); if (!ttl) return;
     ttl.textContent = isToday ? this.t('pvToday') : new Date(day0).toLocaleDateString(this.lang, { weekday: 'long', day: 'numeric', month: 'long' });
     this.$('#pv_next').style.visibility = isToday ? 'hidden' : 'visible';
-    const t0 = day0 + 5 * 3600e3, t1 = day0 + 21 * 3600e3, n = 192;
+    const t0 = day0 + 5 * 3600e3, t1 = day0 + 21 * 3600e3, n = 192, step = (t1 - t0) / n;
     const [pvIds, pvHow] = this.spec('pv'), [fcIds] = this.spec('fc'), [clIds] = this.spec('cloud');
     try {
-      const [h, gen, yest, fc] = await Promise.all([
-        this.history([...pvIds, ...fcIds, ...clIds], t0, t1),
+      const [h, gen, yest, fc, wx] = await Promise.all([
+        this.history([...pvIds, ...fcIds, ...clIds], t0, Math.min(t1, now)),
         isToday ? this.energyToday('pv') : this.energyDay('pv', day0),
         this.energyDay('pv', day0 - DAY),
-        this.solarForecast()
+        this.solarForecast(),
+        isToday ? this.weatherForecast() : Promise.resolve(null)
       ]);
       const pv = this.seriesData(h, pvIds, pvHow, t0, t1, n);
-      let pred = fcIds.length ? this.seriesData(h, fcIds, 'sum', t0, t1, n) : null;
-      if (fcIds.length && pred) for (let i = 0; i < n; i++) if (t0 + i * (t1 - t0) / n > Date.now()) pred[i] = null; // only measured part of the SA prediction
-      let fcToday = NaN, fcTomorrow = NaN, fcLeft = NaN;
+      // forecast for the whole day: Home Assistant's solar forecast (Solcast, Forecast.Solar, ...),
+      // otherwise the part of the Solar Assistant prediction recorded so far
+      let pred = null, fcToday = NaN, fcTomorrow = NaN, fcLeft = NaN;
       if (fc) {
-        const pts = new Array(n).fill(null);
-        for (const [t, w] of fc) {
-          if (t >= day0 && t < day1) { fcToday = (isNum(fcToday) ? fcToday : 0) + w / 1000; if (t + 3600e3 > Date.now()) fcLeft = (isNum(fcLeft) ? fcLeft : 0) + w / 1000 * Math.min(1, (t + 3600e3 - Date.now()) / 3600e3); }
-          if (t >= day1 && t < day1 + DAY) fcTomorrow = (isNum(fcTomorrow) ? fcTomorrow : 0) + w / 1000;
-          const i = Math.round((t + 1800e3 - t0) / ((t1 - t0) / n)); if (i >= 0 && i < n) pts[i] = w;
+        const pts = new Array(n).fill(null), add = (x, v) => (isNum(x) ? x : 0) + v;
+        for (const [t, wh, iv] of fc) {
+          if (t >= day0 && t < day1) {
+            fcToday = add(fcToday, wh / 1000);
+            if (t + iv > now) fcLeft = add(fcLeft, wh / 1000 * Math.min(1, (t + iv - now) / iv));
+          }
+          if (t >= day1 && t < day1 + DAY) fcTomorrow = add(fcTomorrow, wh / 1000);
+          const i = Math.round((t + iv / 2 - t0) / step);
+          if (i >= 0 && i < n) pts[i] = wh * 3600e3 / iv;          // energy per interval -> average W
         }
-        // linear fill between the hourly forecast points
         let a = -1; for (let i = 0; i < n; i++) if (pts[i] != null) { if (a >= 0) for (let j = a + 1; j < i; j++) pts[j] = pts[a] + (pts[i] - pts[a]) * (j - a) / (i - a); a = i; }
-        if (!pred) pred = pts;
+        if (pts.some((v) => v != null)) pred = pts;
       }
-      if (isToday && this.sys.fc_left) fcLeft = this.num(this.sys.fc_left);
+      if (!pred && fcIds.length) pred = this.seriesData(h, fcIds, 'sum', t0, t1, n);
+      if (isToday && !isNum(fcLeft) && this.sys.fc_left) fcLeft = this.num(this.sys.fc_left);
+      // cloud cover: recorded values up to now, the weather forecast after now
+      let cloud = clIds.length ? this.seriesData(h, clIds, 'avg', t0, t1, n) : null;
+      const icons = [];
+      if (wx && wx.length) {
+        cloud = cloud || new Array(n).fill(null);
+        const fpts = wx.filter((f) => isNum(f.cloud)).map((f) => [f.t, f.cloud]);
+        for (let i = 0; i < n; i++) {
+          const t = t0 + i * step;
+          if (t < now && cloud[i] != null) continue;
+          let best = null; for (const [ft, c] of fpts) if (ft <= t + 1800e3) best = c;
+          if (best != null && t >= now - 3600e3) cloud[i] = best;
+        }
+        for (const f of wx) if (f.t >= t0 && f.t <= t1 && new Date(f.t).getHours() % 2 === 0) icons.push({ t: f.t + 1800e3, icon: WX_ICON[f.cond] || 'mdi:weather-cloudy', title: f.cond });
+      }
       const peak = pv ? Math.max(0, ...pv.filter((v) => v != null)) : NaN;
       this.$('#pv_g').textContent = fmtKwh(gen);
       this.$('#pv_y').textContent = fmtKwh(yest);
       this.$('#pv_r').textContent = isToday ? fmtKwh(fcLeft) : '–';
-      this.$('#pv_t').textContent = isToday ? fmtKwh(fcTomorrow) : '–';
+      this.$('#pv_t').textContent = isToday ? fmtKwh(fcTomorrow) : fmtKwh(fcToday);
+      this.$('#pv_tl').textContent = isToday ? this.t('tomorrow') : this.t('predicted');
       const totalDay = isNum(gen) ? gen + (isToday && isNum(fcLeft) ? fcLeft : 0) : NaN;
       this.$('#pv_bar').style.width = isNum(gen) && totalDay > 0 ? Math.min(100, gen / totalDay * 100) + '%' : '0';
       if (isToday) {
         this.$('#d_pvday').textContent = this.t('today') + ': ' + fmtKwh(gen);
         this.$('#d_pvpeak').textContent = this.t('peak') + ': ' + fmtW(peak);
       }
-      const cloud = clIds.length ? this.seriesData(h, clIds, 'avg', t0, t1, n) : null;
       this.chart(this.$('#c_pvday'), { id: 'pvday', t0, t1, n, unit: 'W', unitR: cloud ? '%' : '', rightRange: [0, 100, 50],
-        marks: isToday ? [{ t: Date.now() }] : [],
+        marks: isToday ? [{ t: now }] : [], icons,
         series: [
           { name: this.t('generated'), color: COL.pv, data: pv, fill: true },
           { name: this.t('predicted'), color: COL.fc, data: pred, dash: true },
@@ -703,6 +759,8 @@ class GrowSolarPanel extends HTMLElement {
     set('#d_batv', isNum(bv) ? bv.toFixed(1) + ' V' : '–');
     set('#d_soc', isNum(soc) ? Math.round(soc) + ' %' : '–');
     const bi = this.$('#d_batic'); if (bi) bi.innerHTML = ICON.battery(soc);
+    const rate = this.socRate(), re = this.$('#d_rate');
+    if (re && isNum(rate)) { re.textContent = (rate > 0 ? '+' : rate < 0 ? '−' : '') + Math.abs(rate).toFixed(1) + ' ' + this.t('perHour'); re.className = rate < -0.05 ? 'red' : rate > 0.05 ? 'grn' : ''; }
     const n = Math.max(1, this.invs.length), maxP = n * 6000;
     const pvMax = this._cfg.pv_kwp > 0 ? this._cfg.pv_kwp * 1000 : maxP;
     this.gauge(this.$('#g_load'), this.t('load'), load, maxP, COL.load);
@@ -929,6 +987,7 @@ class GrowSolarPanel extends HTMLElement {
       [T('current'), isNum(ba) ? ba.toFixed(1) + ' A' : null],
       [T('voltage'), isNum(bv) ? bv.toFixed(2) + ' V' : null],
       [T('timeLeft'), isNum(h) ? fmtDur(h) + ' ' + T(bw > 0 ? 'toFull' : 'toEmpty') : null],
+      [T('socRate'), isNum(this.socRate()) ? (this.socRate() > 0 ? '+' : '') + this.socRate().toFixed(1) + ' %/h' : null],
       [T('cycles'), s.cycles ? fmtNum(this.num(s.cycles)) : null],
       [T('cellV') + ' · ' + T('highest'), s.cell_hi ? fmtNum(this.num(s.cell_hi), 3) + ' V' : null],
       [T('cellV') + ' · ' + T('lowest'), s.cell_lo ? fmtNum(this.num(s.cell_lo), 3) + ' V' : null],
