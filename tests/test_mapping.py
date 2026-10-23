@@ -91,6 +91,19 @@ def test_settings_dongle_and_bms():
     assert mp["inverters"][0]["serial"] == "sensor.growatt_1_serial_number"
 
 
+
+def test_order_and_names():
+    mp = m.apply_order(m.build_map("solar_assistant", ALL, 3, None, CTRL), "1,3,2", "L1, L2 ,L3")
+    assert mp["inverters"][1]["pv2_v"] == "sensor.sa_inv3_pv_voltage_2"
+    assert mp["inverters"][2]["pv2_v"] == "sensor.sa_inv2_pv_voltage_2"
+    assert mp["settings"][1]["output_source_priority"] == "select.sa_inv3_osp"
+    assert mp["names"] == ["L1", "L2", "L3"]
+    assert m.parse_order("1,1,2", 3) == [1, 2, 3]
+    assert m.parse_order("x", 3) == [1, 2, 3]
+    assert m.parse_order("", 3) == [1, 2, 3]
+    assert m.parse_names("", 2) == ["#1", "#2"]
+
+
 if __name__ == "__main__":
     for k, f in list(globals().items()):
         if k.startswith("test_"):

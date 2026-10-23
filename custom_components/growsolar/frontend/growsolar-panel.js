@@ -7,7 +7,7 @@
  * SPDX-License-Identifier: MIT
  */
 (() => {
-const VERSION = '0.2.0';
+const VERSION = '0.2.1';
 
 /* ------------------------------------------------------------------ texts */
 const STR = {
@@ -325,6 +325,7 @@ class GrowSolarPanel extends HTMLElement {
   num(id) { if (!id || !this._hass) return NaN; const s = this._hass.states[id]; if (!s) return NaN; const v = parseFloat(s.state); return isFinite(v) ? v : NaN; }
   txt(id) { if (!id || !this._hass) return null; const s = this._hass.states[id]; return s && s.state !== 'unknown' && s.state !== 'unavailable' ? s.state : null; }
   get invs() { return this._map.inverters || []; }
+  invName(n) { return (this._map.names || [])[n] || `#${n + 1}`; }
   get sys() { return this._map.system || {}; }
   get en() { return this._map.energy || {}; }
   $(s) { return this.shadowRoot.querySelector(s); }
@@ -872,10 +873,10 @@ class GrowSolarPanel extends HTMLElement {
   }
   _chartDefs() {
     const inv = this.invs, s = this.sys, T = (k) => this.t(k);
-    const per = (key, scale) => inv.map((i, n) => ({ ids: i[key] ? [i[key]] : [], name: `${T('perInv')} ${n + 1}`, color: INV_COL[n % 6], how: 'avg', scale }));
+    const per = (key, scale) => inv.map((i, n) => ({ ids: i[key] ? [i[key]] : [], name: `${T('perInv')} ${this.invName(n)}`, color: INV_COL[n % 6], how: 'avg', scale }));
     const sysS = (key, name, color, extra) => { const [ids, how] = this.spec(key); return { ids, how, name, color, scale: this.keySign(key), ...extra }; };
     const multi = inv.length > 1;
-    const invBat = inv.map((i, n) => ({ ids: i.bat_a ? [i.bat_a] : [], name: `${T('perInv')} ${n + 1}`, color: INV_COL[n % 6], how: 'avg', dash: true }));
+    const invBat = inv.map((i, n) => ({ ids: i.bat_a ? [i.bat_a] : [], name: `${T('perInv')} ${this.invName(n)}`, color: INV_COL[n % 6], how: 'avg', dash: true }));
     return [
       { id: 'c_over', title: T('overview'), unit: 'W', full: true, series: [sysS('load', T('load'), COL.load, { fill: true }), sysS('grid', T('grid'), COL.grid), sysS('pv', T('solar'), COL.pv, { fill: true })] },
       { id: 'c_bat', title: T('batteryPower'), unit: 'W', signed: true, series: [sysS('bat', T('batteryPower'), '#e9eefc', { fill: false, width: 1.6 })] },
@@ -886,7 +887,7 @@ class GrowSolarPanel extends HTMLElement {
       { id: 'c_m2a', title: T('mppt2a'), unit: 'A', dec: 1, series: per('pv2_a') },
       { id: 'c_m1w', title: T('mppt1w'), unit: 'W', series: per('pv1') },
       { id: 'c_m2w', title: T('mppt2w'), unit: 'W', series: per('pv2') },
-      { id: 'c_pv', title: T('pvPower'), unit: 'W', series: [sysS('pv', T('total'), COL.pv, { fill: true }), ...(multi ? inv.map((i, n) => ({ ids: i.pv ? [i.pv] : [i.pv1, i.pv2].filter(Boolean), how: 'sum', name: `${T('perInv')} ${n + 1}`, color: INV_COL[(n + 1) % 6], dash: true })) : [])] },
+      { id: 'c_pv', title: T('pvPower'), unit: 'W', series: [sysS('pv', T('total'), COL.pv, { fill: true }), ...(multi ? inv.map((i, n) => ({ ids: i.pv ? [i.pv] : [i.pv1, i.pv2].filter(Boolean), how: 'sum', name: `${T('perInv')} ${this.invName(n)}`, color: INV_COL[(n + 1) % 6], dash: true })) : [])] },
       { id: 'c_bata', title: T('batteryCurrent'), unit: 'A', dec: 1, signed: true, series: [sysS('bata', T('total'), '#e9eefc', { fill: true }), ...(multi ? invBat : [])] },
       { id: 'c_batv', title: T('batteryVoltage'), unit: 'V', dec: 1, zero: false, series: multi ? per('bat_v') : [sysS('batv', T('batteryVoltage'), COL.bat)] },
       { id: 'c_batt', title: T('batteryTemp'), unit: '°C', dec: 1, zero: false, series: [{ ids: s.bat_temp ? [s.bat_temp] : [], how: 'avg', name: T('batteryTemp'), color: COL.bat }] },
@@ -894,7 +895,7 @@ class GrowSolarPanel extends HTMLElement {
       { id: 'c_temp', title: T('invTemp'), unit: '°C', dec: 1, zero: false, series: per('temp') },
       { id: 'c_gridv', title: T('gridV'), unit: 'V', zero: false, series: per('grid_v') },
       { id: 'c_gridhz', title: T('gridHz'), unit: 'Hz', dec: 2, zero: false, series: per('grid_hz') },
-      { id: 'c_load', title: T('loadPower'), unit: 'W', series: [sysS('load', T('total'), COL.load, { fill: true }), ...(multi ? inv.map((i, n) => ({ ids: i.load ? [i.load] : [], how: 'avg', name: `${T('perInv')} ${n + 1}`, color: INV_COL[(n + 1) % 6], dash: true })) : [])] },
+      { id: 'c_load', title: T('loadPower'), unit: 'W', series: [sysS('load', T('total'), COL.load, { fill: true }), ...(multi ? inv.map((i, n) => ({ ids: i.load ? [i.load] : [], how: 'avg', name: `${T('perInv')} ${this.invName(n)}`, color: INV_COL[(n + 1) % 6], dash: true })) : [])] },
       { id: 'c_bus', title: T('busV'), unit: 'V', zero: false, series: s.bus_v ? [{ ids: [s.bus_v], how: 'avg', name: T('busV'), color: COL.pv, fill: true }] : per('bus_v') }
     ].map((c) => ({ ...c, series: c.series.filter((x) => x.ids && x.ids.length) })).filter((c) => c.series.length);
   }
@@ -985,7 +986,7 @@ class GrowSolarPanel extends HTMLElement {
   /* ================================================================= inverters */
   _inverters(m) {
     const n = this.invs.length, multi = n > 1, T = (k) => this.t(k);
-    const head = `<tr><th></th>${multi ? `<th>${T('total')}</th>` : ''}${this.invs.map((_, i) => `<th>#${i + 1}</th>`).join('')}</tr>`;
+    const head = `<tr><th></th>${multi ? `<th>${T('total')}</th>` : ''}${this.invs.map((_, i) => `<th>${esc(this.invName(i))}</th>`).join('')}</tr>`;
     const rows = [
       ['deviceMode', 'mode'], ['temperature', 'temp'], ['busV', 'bus_v'], [null],
       ['loadPct', 'load_pct'], ['loadPower', 'load'], ['loadVA', 'load_va'], ['acOutV', 'out_v'], ['acOutHz', 'out_hz'], [null],
@@ -1068,7 +1069,7 @@ class GrowSolarPanel extends HTMLElement {
     if (!keys.length) { m.innerHTML = `<section class="card"><div class="empty" style="text-align:left">${esc(T('noSettings'))}</div></section>`; return; }
     const locked = this._map.settings_locked || [];
     const multi = n > 1;
-    const head = `<tr><th>${T('setting')}</th>${this.sets.map((_, i) => `<th>#${i + 1}</th>`).join('')}${multi && this.isAdmin ? `<th class="all">${T('allInv')}</th>` : ''}</tr>`;
+    const head = `<tr><th>${T('setting')}</th>${this.sets.map((_, i) => `<th>${esc(this.invName(i))}</th>`).join('')}${multi && this.isAdmin ? `<th class="all">${T('allInv')}</th>` : ''}</tr>`;
     const body = keys.map((k) => `<tr data-s="${k}"><td>${esc(this.setLabel(k))}${locked.includes(k) ? ` <small title="${esc(T('locked'))}">${T('readOnly')}</small>` : ''}</td>` +
       this.sets.map((_, i) => `<td class="sv" data-i="${i}"></td>`).join('') +
       (multi && this.isAdmin ? `<td class="all">${locked.includes(k) ? '' : this._control(k, null)}</td>` : '') + '</tr>').join('');
@@ -1137,7 +1138,7 @@ class GrowSolarPanel extends HTMLElement {
     const el = this.$('#s_log'), c = this.$('#s_logc');
     if (!el || !this._setLog) return;
     c.style.display = this._setLog.length ? 'block' : 'none';
-    el.innerHTML = this._setLog.slice().reverse().map((r) => `<div class="${r.st}"><span>${esc(r.time)}</span><span>#${r.i + 1}</span><span>${esc(r.what)}</span><b>${esc(r.msg)}</b></div>`).join('');
+    el.innerHTML = this._setLog.slice().reverse().map((r) => `<div class="${r.st}"><span>${esc(r.time)}</span><span>${esc(this.invName(r.i))}</span><span>${esc(r.what)}</span><b>${esc(r.msg)}</b></div>`).join('');
   }
   _modal(title, html, ok) {
     const md = this.$('#s_modal');
@@ -1157,7 +1158,7 @@ class GrowSolarPanel extends HTMLElement {
       if (!isNum(v) || v < a.min || v > a.max) return;
     }
     const u = st && st.attributes.unit_of_measurement ? ' ' + st.attributes.unit_of_measurement : '';
-    const list = targets.map(([n, id]) => `<li>#${n + 1}: ${esc(this.setText(id) ?? '–')} → <b>${esc(value + (id.startsWith('number.') ? u : ''))}</b>${this.sameVal(id, value) ? ' ✓' : ''}</li>`).join('');
+    const list = targets.map(([n, id]) => `<li>${esc(this.invName(n))}: ${esc(this.setText(id) ?? '–')} → <b>${esc(value + (id.startsWith('number.') ? u : ''))}</b>${this.sameVal(id, value) ? ' ✓' : ''}</li>`).join('');
     this._modal(this.t('confirmTitle'), `<p><b>${esc(this.setLabel(k))}</b></p><ul>${list}</ul><p class="note">${esc(this.t('confirmNote'))}</p>`,
       () => this._runSet(k, targets.filter(([, id]) => !this.sameVal(id, value)), value));
   }

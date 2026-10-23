@@ -15,6 +15,8 @@ from .const import (
     CONF_CURRENCY,
     CONF_INVERTERS,
     CONF_MANUAL,
+    CONF_NAMES,
+    CONF_ORDER,
     CONF_PRICE,
     CONF_PV_KWP,
     CONF_SOURCE,
@@ -70,6 +72,9 @@ def _settings_schema(defaults: dict, detected: int) -> vol.Schema:
                 selector.NumberSelectorConfig(min=0, max=100, step=0.01, mode="box")
             ),
             vol.Required(CONF_CURRENCY, default=defaults.get(CONF_CURRENCY, "RON")): str,
+            # optional: show the inverters in another order ("1,3,2") and with names ("L1,L2,L3")
+            vol.Optional(CONF_ORDER, description={"suggested_value": defaults.get(CONF_ORDER, "")}): str,
+            vol.Optional(CONF_NAMES, description={"suggested_value": defaults.get(CONF_NAMES, "")}): str,
         }
     )
 
@@ -165,6 +170,9 @@ class GrowSolarOptionsFlow(OptionsFlow):
         detected = detect_inverters(source, uids)
         if user_input is not None:
             user_input[CONF_INVERTERS] = int(user_input[CONF_INVERTERS])
+            # an emptied optional field is left out of user_input: clear it
+            user_input.setdefault(CONF_ORDER, "")
+            user_input.setdefault(CONF_NAMES, "")
             self._data = {**current, **user_input}
             return await self.async_step_manual()
         entity_map = build_map(source, uids, int(current.get(CONF_INVERTERS) or 1), current.get(CONF_MANUAL))
