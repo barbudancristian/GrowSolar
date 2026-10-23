@@ -80,6 +80,9 @@ def _manual_schema(defaults: dict) -> vol.Schema:
         fields[vol.Optional(key, description={"suggested_value": defaults.get(key)})] = (
             selector.EntitySelector(selector.EntitySelectorConfig(domain="sensor", device_class=dc))
         )
+    # sign of the chosen sensors: GrowSolar expects battery + while charging and grid + while importing
+    fields[vol.Optional("invert_bat", default=bool(defaults.get("invert_bat", False)))] = selector.BooleanSelector()
+    fields[vol.Optional("invert_grid", default=bool(defaults.get("invert_grid", False)))] = selector.BooleanSelector()
     # weather entity for the cloud forecast on the "PV today" chart (default: the first one found)
     fields[vol.Optional("weather", description={"suggested_value": defaults.get("weather")})] = (
         selector.EntitySelector(selector.EntitySelectorConfig(domain="weather"))
@@ -136,7 +139,7 @@ class GrowSolarConfigFlow(ConfigFlow, domain=DOMAIN):
 
     async def async_step_manual(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
         if user_input is not None:
-            self._data[CONF_MANUAL] = {k: v for k, v in user_input.items() if v}
+            self._data[CONF_MANUAL] = {k: v for k, v in user_input.items() if v not in (None, "", [])}
             return self._finish()
         return self.async_show_form(step_id="manual", data_schema=_manual_schema({}))
 
@@ -177,7 +180,7 @@ class GrowSolarOptionsFlow(OptionsFlow):
 
     async def async_step_manual(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
         if user_input is not None:
-            self._data[CONF_MANUAL] = {k: v for k, v in user_input.items() if v}
+            self._data[CONF_MANUAL] = {k: v for k, v in user_input.items() if v not in (None, "", [])}
             return self.async_create_entry(data=self._data)
         return self.async_show_form(
             step_id="manual", data_schema=_manual_schema(self._data.get(CONF_MANUAL) or {})
