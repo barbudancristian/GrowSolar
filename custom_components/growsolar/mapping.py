@@ -63,6 +63,11 @@ DONGLE_BMS = {
     "cell_hi": "bms_cell_max",
     "cell_lo": "bms_cell_min",
     "cell_imb": "bms_cell_delta",
+    "bms_chg_a": "bms_max_charge_current",
+    "bms_chg_v": "bms_charge_voltage",
+    "bms_status": "bms_status",
+    "bms_error": "bms_error",
+    "bms_warning": "bms_warning",
 }
 
 # ---- Inverter settings (select / number entities) ----
@@ -245,6 +250,15 @@ def build_map(source: str, uids: dict[str, str], inverters: int, manual: dict | 
             ent = uids.get(uid)
             if ent:
                 system[key] = ent
+        # a DongleGrowatt on the BMS inverter adds what Solar Assistant does not publish
+        # (battery temperature, the BMS charge limits and codes)
+        for i in range(1, MAX_INVERTERS + 1):
+            if f"growatt_{i}_bms_soc" in uids:
+                for key, suffix in DONGLE_BMS.items():
+                    ent = uids.get(f"growatt_{i}_{suffix}")
+                    if ent and key not in system:
+                        system[key] = ent
+                break
         for key, uid_list in SA_ENERGY.items():
             energy[key] = [uids[u] for u in uid_list if u in uids]
 
