@@ -39,7 +39,9 @@
           "energy_grid_in": "Energie din rețea",
           "energy_bat_in": "Energie încărcată în baterie",
           "energy_bat_out": "Energie descărcată din baterie",
-          "weather": "Vreme (prognoza norilor)"
+          "weather": "Vreme (prognoza norilor)",
+          "invert_bat": "Senzorul bateriei e pozitiv la descărcare (inversează)",
+          "invert_grid": "Senzorul rețelei e negativ când iei din rețea (inversează)"
         }
       }
     }
@@ -74,7 +76,9 @@
           "energy_grid_in": "Energie din rețea",
           "energy_bat_in": "Energie încărcată în baterie",
           "energy_bat_out": "Energie descărcată din baterie",
-          "weather": "Vreme (prognoza norilor)"
+          "weather": "Vreme (prognoza norilor)",
+          "invert_bat": "Senzorul bateriei e pozitiv la descărcare (inversează)",
+          "invert_grid": "Senzorul rețelei e negativ când iei din rețea (inversează)"
         }
       }
     }

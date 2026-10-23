@@ -7,7 +7,7 @@
  * SPDX-License-Identifier: MIT
  */
 (() => {
-const VERSION = '0.1.2';
+const VERSION = '0.1.3';
 
 /* ------------------------------------------------------------------ texts */
 const STR = {
@@ -286,7 +286,14 @@ class GrowSolarPanel extends HTMLElement {
       default: return [[], 'sum'];
     }
   }
-  liveVal(key) { const [ids, how] = this.spec(key); const v = ids.map((i) => this.num(i)); return how === 'avg' ? avg(v) : sum(v); }
+  /* -1 when the user's sensor has the opposite sign (manual source) */
+  keySign(key) {
+    const o = this._map.options || {};
+    if ((key === 'bat' || key === 'bata') && o.invert_bat && (this.sys.bat_w || this.sys.bat_a)) return -1;
+    if (key === 'grid' && o.invert_grid && this.sys.grid_w) return -1;
+    return 1;
+  }
+  liveVal(key) { const [ids, how] = this.spec(key); const v = ids.map((i) => this.num(i)); return (how === 'avg' ? avg(v) : sum(v)) * this.keySign(key); }
   invBatW(i) { // + charging
     if (i.bat_w) return this.num(i.bat_w);
     const v = this.num(i.bat_v), a = this.num(i.bat_a);
@@ -729,7 +736,7 @@ class GrowSolarPanel extends HTMLElement {
       const el = this.$('#c_over'); if (!el) return;
       this.chart(el, { id: 'over', t0, t1, n, unit: 'W', series: [
         { name: this.t('load'), color: COL.load, data: this.seriesData(h, sp[0][0], 'sum', t0, t1, n), fill: true },
-        { name: this.t('grid'), color: COL.grid, data: this.seriesData(h, sp[1][0], 'sum', t0, t1, n) },
+        { name: this.t('grid'), color: COL.grid, data: this.seriesData(h, sp[1][0], 'sum', t0, t1, n, this.keySign('grid')) },
         { name: this.t('solar'), color: COL.pv, data: this.seriesData(h, sp[2][0], 'sum', t0, t1, n), fill: true }
       ] });
     } catch (e) { console.error('GrowSolar overview', e); }
@@ -802,7 +809,7 @@ class GrowSolarPanel extends HTMLElement {
   _chartDefs() {
     const inv = this.invs, s = this.sys, T = (k) => this.t(k);
     const per = (key, scale) => inv.map((i, n) => ({ ids: i[key] ? [i[key]] : [], name: `${T('perInv')} ${n + 1}`, color: INV_COL[n % 6], how: 'avg', scale }));
-    const sysS = (key, name, color, extra) => { const [ids, how] = this.spec(key); return { ids, how, name, color, ...extra }; };
+    const sysS = (key, name, color, extra) => { const [ids, how] = this.spec(key); return { ids, how, name, color, scale: this.keySign(key), ...extra }; };
     const multi = inv.length > 1;
     const invBat = inv.map((i, n) => ({ ids: i.bat_a ? [i.bat_a] : [], name: `${T('perInv')} ${n + 1}`, color: INV_COL[n % 6], how: 'avg', dash: true }));
     return [

@@ -39,7 +39,9 @@
           "energy_grid_in": "Energy from grid",
           "energy_bat_in": "Battery energy charged",
           "energy_bat_out": "Battery energy discharged",
-          "weather": "Weather (cloud forecast)"
+          "weather": "Weather (cloud forecast)",
+          "invert_bat": "Battery sensor is positive while discharging (invert)",
+          "invert_grid": "Grid sensor is negative while importing (invert)"
         }
       }
     }
@@ -74,7 +76,9 @@
           "energy_grid_in": "Energy from grid",
           "energy_bat_in": "Battery energy charged",
           "energy_bat_out": "Battery energy discharged",
-          "weather": "Weather (cloud forecast)"
+          "weather": "Weather (cloud forecast)",
+          "invert_bat": "Battery sensor is positive while discharging (invert)",
+          "invert_grid": "Grid sensor is negative while importing (invert)"
         }
       }
     }

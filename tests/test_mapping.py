@@ -55,6 +55,12 @@ def test_manual_overrides():
     assert mp["energy"]["bat_in"] == ["sensor.bms_in"]
 
 
+def test_manual_sign_options():
+    mp = m.build_map("manual", {}, 1, {"bat_w": "sensor.b", "invert_bat": True, "invert_grid": False})
+    assert mp["system"] == {"bat_w": "sensor.b"}
+    assert mp["options"] == {"invert_bat": True, "invert_grid": False}
+
+
 def test_manual_only():
     mp = m.build_map("manual", {}, 1, {"pv": "sensor.pv", "load": "sensor.load", "soc": "sensor.soc", "energy_pv": "sensor.e"})
     assert mp["inverters"] == [{}]

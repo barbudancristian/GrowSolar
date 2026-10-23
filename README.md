@@ -53,9 +53,11 @@ Manual install: copy `custom_components/growsolar` into your `config/custom_comp
 
 ## Setup
 
+Full guide with every option, the manual sensor choice and troubleshooting: **[docs/SETUP.en.md](docs/SETUP.en.md)**.
+
 1. **Data source**: DongleGrowatt, Solar Assistant or manual. The dialog shows how many inverters it found for each source.
 2. **System**: name in the sidebar, number of inverters, battery capacity (kWh), solar array size (kWp, for the solar gauge), energy price and currency.
-3. Only for the manual source: choose the sensors (solar, load, battery, grid power, state of charge, energy counters).
+3. Only for the manual source: choose the sensors (solar, load, battery, grid power, state of charge, energy counters), tick the sign boxes if your battery or grid sensor uses the opposite sign, and optionally a weather entity.
 
 You can change everything later from **Configure**, where you can also add or replace single sensors. The panel reloads by itself.
 

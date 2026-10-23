@@ -53,9 +53,11 @@ Instalare manuală: copiezi folderul `custom_components/growsolar` în `config/c
 
 ## Configurare
 
+Ghidul complet, cu toate opțiunile, alegerea manuală a senzorilor și problemele frecvente: **[docs/SETUP.ro.md](docs/SETUP.ro.md)**.
+
 1. **Sursa datelor**: DongleGrowatt, Solar Assistant sau manual. Fereastra arată câte invertoare a găsit pentru fiecare sursă.
 2. **Sistem**: numele din bara laterală, numărul de invertoare, capacitatea bateriei (kWh), puterea panourilor (kWp, pentru indicatorul solar), prețul energiei și moneda.
-3. Doar pentru sursa manuală: alegi senzorii (putere solară, consum, baterie, rețea, stare de încărcare, contoare de energie).
+3. Doar pentru sursa manuală: alegi senzorii (putere solară, consum, baterie, rețea, stare de încărcare, contoare de energie), bifezi inversarea semnului dacă senzorul bateriei sau al rețelei folosește semnul invers și, opțional, o entitate de vreme.
 
 Poți schimba totul mai târziu din **Configure**, unde poți și adăuga sau înlocui senzori individuali. Pagina se reîncarcă singură.
 

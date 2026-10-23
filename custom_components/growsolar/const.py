@@ -1,7 +1,7 @@
 """Constants for GrowSolar."""
 
 DOMAIN = "growsolar"
-VERSION = "0.1.2"
+VERSION = "0.1.3"
 
 PANEL_URL = "growsolar"
 STATIC_URL = "/growsolar_static"

@@ -166,7 +166,11 @@ def build_map(source: str, uids: dict[str, str], inverters: int, manual: dict | 
         for key, uid_list in SA_ENERGY.items():
             energy[key] = [uids[u] for u in uid_list if u in uids]
 
+    options: dict = {}
     for key, ent in (manual or {}).items():
+        if isinstance(ent, bool):
+            options[key] = ent
+            continue
         if not ent:
             continue
         if key.startswith("energy_"):
@@ -182,6 +186,8 @@ def build_map(source: str, uids: dict[str, str], inverters: int, manual: dict | 
         # energy sensors that reset every day; the panel reads them the same way
         # (daily change from the long-term statistics) in both cases
         "energy_daily_reset": source == SOURCE_SA,
+        # invert_bat / invert_grid: the chosen sensors use the opposite sign
+        "options": options,
     }
 
 
