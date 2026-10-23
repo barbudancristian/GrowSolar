@@ -63,7 +63,7 @@ You can change everything later from **Configure**, where you can also add or re
 
 - Home Assistant 2024.11 or newer, with the **recorder** (on by default).
 - *Charts* use the history (up to 3 days) and the 5-minute or hourly statistics (longer ranges). *Totals* use the long-term statistics of the energy counters (`state_class: total_increasing`), so they fill up from the day the counters started.
-- Forecast: the *Remaining* and *Tomorrow* values and the dashed curve come from the **Forecast.Solar** integration, if it is set up in Home Assistant, and from Solar Assistant's own prediction when that is the source.
+- Forecast: the dashed curve for the whole day, *Remaining* and *Tomorrow* come from the solar forecast in Home Assistant's Energy settings (**Solcast** or **Forecast.Solar**); without one, from Solar Assistant's own prediction. The cloud cover after the current hour and the weather icons come from a weather entity (the first one found, or the one chosen in Configure).
 - Sign convention in the page: battery power positive while charging, grid power positive while importing.
 - With DongleGrowatt the grid power is an estimate (grid to load in bypass plus grid charging), and *Battery charged* is not available because the inverter has no counter for it.
 - Everything stays in your Home Assistant. The page uses no internet services and no external libraries.
