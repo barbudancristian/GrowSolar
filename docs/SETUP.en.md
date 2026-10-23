@@ -56,6 +56,8 @@ The first two sources find the sensors by their **unique id**, so it does not ma
 | **Solar array size (kWp)** | The panels' total peak power, for example 6 × 600 W = 3.6. Only sets the scale of the solar gauge; 0 = 6 kW per inverter. |
 | **Energy price per kWh** | What you pay for 1 kWh from the grid. Used for the savings in *Totals*: (load − energy from grid) × price. |
 | **Currency** | Shown next to the savings, for example `RON`, `EUR`. |
+| **Inverter order** (optional) | Which inverter of the source goes in each column, for example `1,3,2`. Solar Assistant numbers the inverters by the USB port they are plugged into, so its numbers may not match the phases: if its inverter 3 is on L2, enter `1,3,2`. Empty = the source's order. |
+| **Inverter names** (optional) | Names for the columns and chart lines, for example `L1,L2,L3`. Empty = `#1`, `#2`, ... |
 
 For DongleGrowatt and Solar Assistant, setup ends here and the **GrowSolar** page appears in the sidebar. If it does not, refresh the browser (on a phone, close and reopen the app).
 

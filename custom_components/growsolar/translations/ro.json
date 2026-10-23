@@ -13,14 +13,16 @@
       },
       "settings": {
         "title": "Sistem",
-        "description": "Invertoare găsite: {detected}. Prețul se folosește pentru economiile din Totals.",
+        "description": "Invertoare găsite: {detected}. Prețul se folosește pentru economiile din Totals.\n\nOrdinea invertoarelor: ce invertor din sursă apare în fiecare coloană. Dacă Solar Assistant le numerotează 1, 2, 3 după portul USB, „1,3,2” pune invertorul lui 3 în a doua coloană.",
         "data": {
           "title": "Nume în bara laterală",
           "inverters": "Număr de invertoare",
           "battery_kwh": "Capacitatea bateriei",
           "pv_kwp": "Puterea panourilor (0 = necunoscută)",
           "price": "Preț energie pe kWh",
-          "currency": "Monedă"
+          "currency": "Monedă",
+          "inverter_order": "Ordinea invertoarelor, de ex. 1,3,2 (opțional)",
+          "inverter_names": "Numele invertoarelor, de ex. L1,L2,L3 (opțional)"
         }
       },
       "manual": {
@@ -50,14 +52,16 @@
     "step": {
       "init": {
         "title": "GrowSolar",
-        "description": "Sursa: {source}. Invertoare găsite: {detected}. Negăsite: {missing}.",
+        "description": "Sursa: {source}. Invertoare găsite: {detected}. Negăsite: {missing}.\n\nOrdinea invertoarelor: ce invertor din sursă apare în fiecare coloană. Dacă Solar Assistant le numerotează 1, 2, 3 după portul USB, „1,3,2” pune invertorul lui 3 în a doua coloană.",
         "data": {
           "title": "Nume în bara laterală",
           "inverters": "Număr de invertoare",
           "battery_kwh": "Capacitatea bateriei",
           "pv_kwp": "Puterea panourilor (0 = necunoscută)",
           "price": "Preț energie pe kWh",
-          "currency": "Monedă"
+          "currency": "Monedă",
+          "inverter_order": "Ordinea invertoarelor, de ex. 1,3,2 (opțional)",
+          "inverter_names": "Numele invertoarelor, de ex. L1,L2,L3 (opțional)"
         }
       },
       "manual": {

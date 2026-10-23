@@ -275,6 +275,45 @@ def build_map(source: str, uids: dict[str, str], inverters: int, manual: dict | 
     }
 
 
+def parse_order(text: str | None, inverters: int) -> list[int]:
+    """"1,3,2" -> [1, 3, 2]: which source inverter is shown in each column.
+
+    Anything that is not a complete list of 1..inverters gives the normal order.
+    """
+    normal = list(range(1, inverters + 1))
+    if not text:
+        return normal
+    try:
+        order = [int(x) for x in str(text).replace(";", ",").replace(" ", ",").split(",") if x.strip()]
+    except ValueError:
+        return normal
+    return order if sorted(order) == normal else normal
+
+
+def parse_names(text: str | None, inverters: int) -> list[str]:
+    """"L1, L2, L3" -> ["L1", "L2", "L3"]; missing names become "#n"."""
+    names = [x.strip() for x in str(text or "").split(",")]
+    return [names[i] if i < len(names) and names[i] else f"#{i + 1}" for i in range(inverters)]
+
+
+def apply_order(entity_map: dict, order_text: str | None, names_text: str | None) -> dict:
+    """Show the inverters in another order and with names (for example by phase).
+
+    Useful when the source numbers them differently from the installation, for example
+    Solar Assistant numbering them by the USB port each one is plugged into.
+    """
+    invs = entity_map.get("inverters", [])
+    n = len(invs)
+    order = parse_order(order_text, n)
+    entity_map["inverters"] = [invs[i - 1] for i in order]
+    sets = entity_map.get("settings") or []
+    if len(sets) == n:
+        entity_map["settings"] = [sets[i - 1] for i in order]
+    entity_map["names"] = parse_names(names_text, n)
+    entity_map["order"] = order
+    return entity_map
+
+
 def missing(entity_map: dict) -> list[str]:
     """Keys the panel needs most and could not find (for the setup summary)."""
     out = []

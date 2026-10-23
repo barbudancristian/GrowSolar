@@ -56,6 +56,8 @@ Primele două surse găsesc senzorii după **ID-ul unic**, deci nu contează cum
 | **Puterea panourilor (kWp)** | Puterea totală a panourilor, de exemplu 6 × 600 W = 3,6. Setează doar scala indicatorului solar; 0 înseamnă 6 kW pe invertor. |
 | **Preț energie pe kWh** | Cât plătești pentru 1 kWh din rețea. Se folosește pentru economiile din *Totaluri*: (consum − energie din rețea) × preț. |
 | **Monedă** | Apare lângă economii, de exemplu `RON`, `EUR`. |
+| **Ordinea invertoarelor** (opțional) | Ce invertor din sursă apare în fiecare coloană, de exemplu `1,3,2`. Solar Assistant numerotează invertoarele după portul USB în care sunt conectate, deci numerele lui pot să nu corespundă fazelor: dacă invertorul lui 3 e pe L2, scrii `1,3,2`. Gol = ordinea din sursă. |
+| **Numele invertoarelor** (opțional) | Numele coloanelor și ale liniilor din grafice, de exemplu `L1,L2,L3`. Gol = `#1`, `#2`, ... |
 
 Pentru DongleGrowatt și Solar Assistant configurarea se termină aici, iar pagina **GrowSolar** apare în bara laterală. Dacă nu apare, dai refresh în browser (pe telefon închizi aplicația și o redeschizi).
 

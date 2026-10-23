@@ -16,6 +16,8 @@ from .const import (
     CONF_CURRENCY,
     CONF_INVERTERS,
     CONF_MANUAL,
+    CONF_NAMES,
+    CONF_ORDER,
     CONF_PRICE,
     CONF_PV_KWP,
     CONF_SOURCE,
@@ -26,7 +28,7 @@ from .const import (
     STATIC_URL,
     VERSION,
 )
-from .mapping import build_map
+from .mapping import apply_order, build_map
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -72,9 +74,13 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Register the GrowSolar panel."""
     await _register_static(hass)
     s = entry_settings(entry)
-    entity_map = build_map(
-        s[CONF_SOURCE], mqtt_unique_ids(hass), int(s[CONF_INVERTERS]), s.get(CONF_MANUAL),
-        mqtt_control_ids(hass),
+    entity_map = apply_order(
+        build_map(
+            s[CONF_SOURCE], mqtt_unique_ids(hass), int(s[CONF_INVERTERS]), s.get(CONF_MANUAL),
+            mqtt_control_ids(hass),
+        ),
+        s.get(CONF_ORDER),
+        s.get(CONF_NAMES),
     )
     title = s.get(CONF_TITLE) or "GrowSolar"
     if PANEL_URL in hass.data.get("frontend_panels", {}):
