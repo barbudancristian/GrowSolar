@@ -1,13 +1,13 @@
 /*
  * GrowSolar panel for Home Assistant
- * Dashboard, Charts, Totals, Inverters and Battery views for Growatt SPF systems.
+ * Dashboard, Charts, Totals, Inverters, Battery and Settings views for Growatt SPF systems.
  * Data: DongleGrowatt or Solar Assistant entities, mapped by the integration (panel.config.map).
  *
  * Author: Barbu Dan-Cristian. Visual style after the dashboard by Andrei Cristetiu.
  * SPDX-License-Identifier: MIT
  */
 (() => {
-const VERSION = '0.1.4';
+const VERSION = '0.2.0';
 
 /* ------------------------------------------------------------------ texts */
 const STR = {
@@ -33,7 +33,15 @@ const STR = {
     toFull: 'to full', toEmpty: 'to empty', charging: 'charging', discharging: 'discharging', idle: 'idle',
     noData: 'No data', noSetup: 'GrowSolar has no entities yet. Open Settings → Devices & services → GrowSolar → Configure.',
     kwhNote: 'Energy from the long-term statistics of the energy counters.', price: 'Price',
-    perInv: 'Inverter', mppt: 'mppt', loading: 'Loading…'
+    perInv: 'Inverter', mppt: 'mppt', loading: 'Loading…',
+    settings: 'Settings', firmware: 'Firmware', invClock: 'Inverter clock', mpptTemp: 'MPPT temperature', fan: 'Fan',
+    setting: 'Setting', allInv: 'All inverters', applyAll: 'Apply to all', edit: 'Change', cancel: 'Cancel', save: 'Save',
+    confirmTitle: 'Change inverter settings?', confirmOk: 'Yes, change', confirmNote: 'The inverters are changed one after the other; each value is checked before the next one is sent.',
+    differ: 'settings differ between the inverters', allSame: 'All inverters have the same settings.',
+    waiting: 'waiting for the inverter…', confirmed: 'confirmed', notConfirmed: 'not confirmed', unavailable: 'not available',
+    syncClock: 'Set the inverter clocks from Home Assistant', syncClockQ: 'Set the clock of every inverter to the current time?',
+    readOnly: 'read only', noSettings: 'No setting entities were found. With Solar Assistant they come from its MQTT discovery; with DongleGrowatt from the Growatt-SPF6K-HA package (version 0.2 or newer), after ticking "Allow inverter settings changes" on each dongle. Reload GrowSolar after adding them.',
+    adminOnly: 'Only administrators can change the settings.', log: 'Changes', locked: 'Shown only: changing it here could switch the output off or stop the BMS link.'
   },
   ro: {
     dashboard: 'Dashboard', charts: 'Grafice', totals: 'Totaluri', inverters: 'Invertoare', battery: 'Baterie',
@@ -57,8 +65,45 @@ const STR = {
     toFull: 'până la plin', toEmpty: 'până la gol', charging: 'se încarcă', discharging: 'se descarcă', idle: 'repaus',
     noData: 'Fără date', noSetup: 'GrowSolar nu are încă entități. Deschide Setări → Dispozitive și servicii → GrowSolar → Configurează.',
     kwhNote: 'Energia vine din statisticile pe termen lung ale contoarelor de energie.', price: 'Preț',
-    perInv: 'Invertor', mppt: 'mppt', loading: 'Se încarcă…'
+    perInv: 'Invertor', mppt: 'mppt', loading: 'Se încarcă…',
+    settings: 'Setări', firmware: 'Firmware', invClock: 'Ceas invertor', mpptTemp: 'Temperatură MPPT', fan: 'Ventilator',
+    setting: 'Setare', allInv: 'Toate invertoarele', applyAll: 'Aplică pe toate', edit: 'Schimbă', cancel: 'Renunță', save: 'Salvează',
+    confirmTitle: 'Schimbi setările invertoarelor?', confirmOk: 'Da, schimbă', confirmNote: 'Invertoarele se schimbă pe rând; fiecare valoare e verificată înainte să o trimit pe următoarea.',
+    differ: 'setări diferă între invertoare', allSame: 'Toate invertoarele au aceleași setări.',
+    waiting: 'aștept invertorul…', confirmed: 'confirmat', notConfirmed: 'neconfirmat', unavailable: 'indisponibil',
+    syncClock: 'Pune ora din Home Assistant pe invertoare', syncClockQ: 'Pun ora curentă pe ceasul fiecărui invertor?',
+    readOnly: 'doar citire', noSettings: 'Nu am găsit entități de setare. Cu Solar Assistant vin din descoperirea lui MQTT; cu DongleGrowatt din pachetul Growatt-SPF6K-HA (versiunea 0.2 sau mai nouă), după ce bifezi „Allow inverter settings changes” pe fiecare dongle. Reîncarcă GrowSolar după ce le adaugi.',
+    adminOnly: 'Doar administratorii pot schimba setările.', log: 'Modificări', locked: 'Doar afișat: schimbarea de aici ar putea opri ieșirea sau legătura cu BMS-ul.'
   }
+};
+
+/* labels of the inverter settings: name -> [en, ro] */
+const SET_LABEL = {
+  output_source_priority: ['Output source priority', 'Prioritate sursă ieșire'],
+  charger_source_priority: ['Charger source priority', 'Prioritate sursă încărcare'],
+  energy_priority: ['Energy priority (BLU / LBU)', 'Prioritate energie (BLU / LBU)'],
+  max_charge_current: ['Max charge current', 'Curent maxim de încărcare'],
+  max_grid_charge_current: ['Max grid charge current', 'Curent maxim din rețea'],
+  max_generator_charge_current: ['Max generator charge current', 'Curent maxim din generator'],
+  battery_absorption_charge_voltage: ['Absorption (bulk) voltage', 'Tensiune de absorbție (bulk)'],
+  battery_float_charge_voltage: ['Float voltage', 'Tensiune float'],
+  to_grid_battery_capacity: ['Switch to grid at SOC', 'Trecere pe rețea la SOC'],
+  back_to_battery_capacity: ['Back to battery at SOC', 'Revenire pe baterie la SOC'],
+  shutdown_battery_capacity: ['Battery cut-off at SOC', 'Oprire baterie la SOC'],
+  to_grid_battery_voltage: ['Switch to grid at voltage', 'Trecere pe rețea la tensiunea'],
+  back_to_battery_voltage: ['Back to battery at voltage', 'Revenire pe baterie la tensiunea'],
+  shutdown_battery_voltage: ['Battery cut-off at voltage', 'Oprire baterie la tensiunea'],
+  ac_input_range: ['AC input range', 'Interval intrare AC'],
+  grid_output_start_hour: ['Grid output from (hour)', 'Ieșire din rețea de la (ora)'],
+  grid_output_stop_hour: ['Grid output until (hour)', 'Ieșire din rețea până la (ora)'],
+  grid_charge_start_hour: ['Grid charging from (hour)', 'Încărcare din rețea de la (ora)'],
+  grid_charge_stop_hour: ['Grid charging until (hour)', 'Încărcare din rețea până la (ora)'],
+  power_saving: ['Power saving', 'Economie de energie'],
+  buzzer: ['Buzzer', 'Buzzer'],
+  overload_restart: ['Overload restart (code)', 'Repornire la suprasarcină (cod)'],
+  overtemperature_restart: ['Over-temperature restart (code)', 'Repornire la supratemperatură (cod)'],
+  battery_type: ['Battery type', 'Tip baterie'],
+  remote_switch: ['Remote switch', 'Pornire / oprire la distanță']
 };
 
 const COL = { pv: '#ffb02e', load: '#4aa3ff', bat: '#35d07f', grid: '#b284ff', bad: '#ff5d6c', fc: '#ffd166', cloud: '#8fa0c8', v: '#5ad1e6' };
@@ -201,6 +246,23 @@ td small{color:var(--mut);margin-left:6px;font-size:11px;background:rgba(255,209
 .kv{display:grid;grid-template-columns:auto 1fr;gap:10px 22px;font-size:15px}
 .kv span:nth-child(odd){color:var(--mut)}
 .kv span:nth-child(even){font-variant-numeric:tabular-nums}
+.note{color:var(--mut);font-size:13px;margin:10px 0 0;line-height:1.45}
+table.sets td.sv.click{cursor:pointer}table.sets td.sv.click:hover{background:rgba(74,111,208,.15)}
+table.sets tr.diff td.sv{color:#ffb02e}
+table.sets td.all{background:rgba(255,255,255,.025)}
+.pend{font-size:12px;color:#ffd166}
+.ed{display:inline-flex;gap:6px;align-items:center}
+.ed .ctl{background:#0d1a3a;border:1px solid #33497e;color:var(--tx);border-radius:8px;padding:5px 7px;font:inherit;font-size:13px;max-width:210px;color-scheme:dark}
+.ed input.ctl{width:84px}.ed .u{color:var(--mut);font-size:12px}
+.btn{background:#2c4fa8;border:1px solid #4a6fd0;color:#fff;border-radius:9px;padding:7px 13px;font:inherit;font-size:14px;cursor:pointer}
+.btn.sm{padding:4px 9px;font-size:13px}.btn.ghost{background:var(--card);border-color:var(--line);color:var(--mut)}
+.slog div{display:grid;grid-template-columns:80px 40px 1fr auto;gap:10px;padding:6px 0;border-bottom:1px solid var(--line);font-size:13px}
+.slog .ok b{color:var(--bat)}.slog .bad b{color:var(--bad)}.slog .wait b{color:#ffd166}
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.55);display:grid;place-items:center;z-index:20}
+.modal[hidden]{display:none}
+.dlg{background:#13254f;border:1px solid #33497e;border-radius:16px;padding:18px 20px;max-width:460px;width:calc(100% - 32px)}
+.dlg h3{margin:0 0 10px;font-size:17px}.dlg ul{padding-left:18px;margin:8px 0}.dlg li{margin:4px 0}
+.dlg .row{display:flex;gap:10px;justify-content:flex-end;margin-top:14px}
 .hb{display:grid;grid-template-columns:130px 1fr 80px;gap:10px;align-items:center;margin:14px 0}
 .hb .t{height:18px;border-radius:9px;background:rgba(255,255,255,.07);position:relative;overflow:hidden}
 .hb .t i{position:absolute;top:0;bottom:0;border-radius:9px}
@@ -303,7 +365,7 @@ class GrowSolarPanel extends HTMLElement {
 
   /* ---------- build */
   _build() {
-    const tabs = ['dashboard', 'charts', 'totals', 'inverters', 'battery'];
+    const tabs = ['dashboard', 'charts', 'totals', 'inverters', 'battery', 'settings'];
     this.shadowRoot.innerHTML = `<style>${CSS}</style><div class="wrap">
       <header>
         <button class="menu" title="Menu"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg></button>
@@ -329,6 +391,7 @@ class GrowSolarPanel extends HTMLElement {
     else if (tab === 'charts') this._chartsView(m);
     else if (tab === 'totals') this._totals(m);
     else if (tab === 'inverters') this._inverters(m);
+    else if (tab === 'settings') this._settings(m);
     else this._battery(m);
     this._live();
   }
@@ -752,6 +815,7 @@ class GrowSolarPanel extends HTMLElement {
     if (this._tab === 'dashboard') this._liveDashboard();
     else if (this._tab === 'inverters') this._liveInverters();
     else if (this._tab === 'battery') this._liveBattery();
+    else if (this._tab === 'settings') this._liveSettings();
   }
   _liveDashboard() {
     const pv = this.liveVal('pv'), load = this.liveVal('load'), bat = this.liveVal('bat'), grid = this.liveVal('grid');
@@ -928,9 +992,10 @@ class GrowSolarPanel extends HTMLElement {
       ['pvPower', 'pv'], ['pvVoltage', 'pv_v'], ['pvCurrent', 'pv_a'], [null],
       ['batteryVoltage', 'bat_v'], ['batteryCurrent', 'bat_a'], ['batteryPower', 'bat_w'], ['batPowerAC', 'bat_ac_w'], [null],
       ['gridPower', 'grid_w'], ['gridV', 'grid_v'], ['gridHz', 'grid_hz'], [null],
-      ['outPrio', 'out_prio'], ['chgPrio', 'chg_prio'], ['serial', 'serial']
+      ['mpptTemp', 'temp_mppt'], ['fan', 'fan'], [null],
+      ['outPrio', 'out_prio'], ['chgPrio', 'chg_prio'], ['serial', 'serial'], ['firmware', 'fw'], ['invClock', 'clock']
     ];
-    const has = (k) => k === 'pv' || k === 'pv_v' || k === 'pv_a' || k === 'bat_w' || k === 'bat_a' || this.invs.some((i) => i[k]) || (k === 'bus_v' && this.sys.bus_v);
+    const has = (k) => (k === 'temp_mppt' && this.invs.some((i) => i.temp_mppt1)) || k === 'pv' || k === 'pv_v' || k === 'pv_a' || k === 'bat_w' || k === 'bat_a' || this.invs.some((i) => i[k]) || (k === 'bus_v' && this.sys.bus_v);
     let body = '', pending = false;
     for (const r of rows) {
       if (!r[0]) { if (body) pending = true; continue; }
@@ -952,7 +1017,9 @@ class GrowSolarPanel extends HTMLElement {
       const vals = [];
       this.invs.forEach((i, n) => {
         let html = '–', v = NaN;
-        if (k === 'mode' || k === 'serial' || k === 'out_prio' || k === 'chg_prio') html = esc(this.txt(i[k]) ?? '–');
+        if (k === 'mode' || k === 'serial' || k === 'out_prio' || k === 'chg_prio' || k === 'fw' || k === 'clock') html = esc(this.txt(i[k]) ?? '–');
+        else if (k === 'temp_mppt') html = `${fmtNum(this.num(i.temp_mppt1), 1)} °C<small>1</small> ${fmtNum(this.num(i.temp_mppt2), 1)} °C<small>2</small>`;
+        else if (k === 'fan') html = fmtNum(this.num(i.fan)) + ' %';
         else if (k === 'pv') { v = this.invPv(i); html = fmtW(v) + (i.pv1 || i.pv2 ? `<div style="color:#97a6c8;font-size:12px">${fmtW(this.num(i.pv1))}<small>${this.t('mppt')} 1</small> ${fmtW(this.num(i.pv2))}<small>${this.t('mppt')} 2</small></div>` : ''); }
         else if (k === 'pv_v') html = `${fmtNum(this.num(i.pv1_v))} V<small>1</small> ${fmtNum(this.num(i.pv2_v))} V<small>2</small>`;
         else if (k === 'pv_a') html = `${fmtNum(this.num(i.pv1_a), 1)} A<small>1</small> ${fmtNum(this.num(i.pv2_a), 1)} A<small>2</small>`;
@@ -970,6 +1037,175 @@ class GrowSolarPanel extends HTMLElement {
         tot.innerHTML = isNum(tv) ? (k === 'pv' ? fmtW(tv) : (fmt[k] || ((x) => fmtNum(x)))(tv)) : '';
       }
     }
+  }
+
+  /* ================================================================= settings */
+  get sets() { return this._map.settings || []; }
+  setLabel(k) { const l = SET_LABEL[k]; return l ? l[this.lang === 'ro-RO' ? 1 : 0] : k.replace(/_/g, ' '); }
+  /* setting names present on at least one inverter, in the integration's order */
+  setKeys() {
+    const order = Object.keys(SET_LABEL), seen = new Set();
+    this.sets.forEach((m) => Object.keys(m).forEach((k) => { if (k !== 'sync_clock') seen.add(k); }));
+    return [...seen].sort((a, b) => (order.indexOf(a) + 1 || 99) - (order.indexOf(b) + 1 || 99));
+  }
+  setState(id) { const st = id && this._hass.states[id]; return st && st.state !== 'unavailable' && st.state !== 'unknown' ? st : null; }
+  setText(id) {
+    const st = this.setState(id); if (!st) return null;
+    const u = st.attributes.unit_of_measurement;
+    if (id.startsWith('number.')) { const v = parseFloat(st.state); const step = st.attributes.step || 1; return isNum(v) ? (step < 1 ? v.toFixed(1) : String(Math.round(v))) + (u ? ' ' + u : '') : st.state; }
+    return st.state;
+  }
+  sameVal(id, target) {
+    const st = this.setState(id); if (!st) return false;
+    if (id.startsWith('number.')) return Math.abs(parseFloat(st.state) - parseFloat(target)) < 1e-6;
+    return st.state === String(target);
+  }
+  get isAdmin() { return !!(this._hass.user && this._hass.user.is_admin); }
+
+  _settings(m) {
+    const T = (k) => this.t(k), keys = this.setKeys(), n = this.sets.length;
+    this._edit = null;
+    if (!keys.length) { m.innerHTML = `<section class="card"><div class="empty" style="text-align:left">${esc(T('noSettings'))}</div></section>`; return; }
+    const locked = this._map.settings_locked || [];
+    const multi = n > 1;
+    const head = `<tr><th>${T('setting')}</th>${this.sets.map((_, i) => `<th>#${i + 1}</th>`).join('')}${multi && this.isAdmin ? `<th class="all">${T('allInv')}</th>` : ''}</tr>`;
+    const body = keys.map((k) => `<tr data-s="${k}"><td>${esc(this.setLabel(k))}${locked.includes(k) ? ` <small title="${esc(T('locked'))}">${T('readOnly')}</small>` : ''}</td>` +
+      this.sets.map((_, i) => `<td class="sv" data-i="${i}"></td>`).join('') +
+      (multi && this.isAdmin ? `<td class="all">${locked.includes(k) ? '' : this._control(k, null)}</td>` : '') + '</tr>').join('');
+    const clocks = this.sets.map((x) => x.sync_clock).filter(Boolean);
+    m.innerHTML = `<section class="card"><h2>${T('settings')}<span class="sp"></span><span class="pill" id="s_diff"></span></h2>
+      ${this.isAdmin ? '' : `<p class="note">${esc(T('adminOnly'))}</p>`}
+      <div class="scroll"><table class="sets">${head}${body}</table></div>
+      ${clocks.length && this.isAdmin ? `<p style="margin:14px 0 0"><button class="btn" id="s_clock">${esc(T('syncClock'))}</button></p>` : ''}
+      <p class="note">${esc(T('confirmNote'))}</p></section>
+      <section class="card" id="s_logc" style="margin-top:14px;display:${this._setLog && this._setLog.length ? 'block' : 'none'}"><h2>${T('log')}</h2><div id="s_log" class="slog"></div></section>
+      <div class="modal" id="s_modal" hidden><div class="dlg"><h3 id="s_mt"></h3><div id="s_mb"></div><div class="row"><button class="btn ghost" id="s_no">${T('cancel')}</button><button class="btn" id="s_yes">${T('confirmOk')}</button></div></div></div>`;
+    m.querySelectorAll('td.all').forEach((td) => {
+      const k = td.parentElement.dataset.s, b = td.querySelector('button');
+      if (b) b.addEventListener('click', () => this._askSet(k, null, td.querySelector('.ctl').value));
+    });
+    m.querySelectorAll('td.sv').forEach((td) => td.addEventListener('click', (e) => {
+      if (e.target.closest('.ctl,button')) return;
+      const k = td.parentElement.dataset.s, i = +td.dataset.i;
+      if (!this.isAdmin || locked.includes(k) || !this.sets[i][k] || this._busy) return;
+      this._edit = { k, i };
+      td.innerHTML = this._control(k, i) ;
+      td.querySelector('button').addEventListener('click', () => this._askSet(k, i, td.querySelector('.ctl').value));
+      const c = td.querySelector('.cancel'); if (c) c.addEventListener('click', () => { this._edit = null; this._liveSettings(); });
+    }));
+    const ck = this.$('#s_clock'); if (ck) ck.addEventListener('click', () => this._askClock());
+    this._renderLog();
+  }
+  /* control for one inverter (i) or for all (i = null) */
+  _control(k, i) {
+    const ids = i == null ? this.sets.map((x) => x[k]).filter(Boolean) : [this.sets[i][k]];
+    const st = ids.map((id) => this._hass.states[id]).find((x) => x && x.attributes);
+    if (!st) return '';
+    const cur = this.setState(ids[0])?.state;
+    let ctl;
+    if (st.entity_id.startsWith('select.')) {
+      ctl = `<select class="ctl">${(st.attributes.options || []).map((o) => `<option${o === cur ? ' selected' : ''}>${esc(o)}</option>`).join('')}</select>`;
+    } else {
+      const a = st.attributes, v = cur ?? '';
+      ctl = `<input class="ctl" type="number" min="${a.min}" max="${a.max}" step="${a.step || 1}" value="${esc(v)}">${a.unit_of_measurement ? `<span class="u">${esc(a.unit_of_measurement)}</span>` : ''}`;
+    }
+    return `<span class="ed">${ctl}<button class="btn sm">${this.t(i == null ? 'applyAll' : 'save')}</button>${i == null ? '' : `<button class="btn sm ghost cancel">×</button>`}</span>`;
+  }
+  _liveSettings() {
+    const rows = this.shadowRoot.querySelectorAll('tr[data-s]');
+    let diff = 0;
+    for (const tr of rows) {
+      const k = tr.dataset.s, vals = [];
+      tr.querySelectorAll('td.sv').forEach((td) => {
+        const i = +td.dataset.i;
+        if (this._edit && this._edit.k === k && this._edit.i === i) return;
+        const id = this.sets[i][k], v = id ? this.setText(id) : null;
+        vals.push(v);
+        const p = this._pending && this._pending[k + '/' + i];
+        td.innerHTML = `${esc(v ?? '–')}${p ? `<div class="pend">→ ${esc(p)}</div>` : ''}`;
+        td.classList.toggle('click', !!(this.isAdmin && id && !(this._map.settings_locked || []).includes(k) && !this._busy));
+      });
+      const known = vals.filter((v) => v != null);
+      const differs = known.length > 1 && known.some((v) => v !== known[0]);
+      tr.classList.toggle('diff', differs);
+      if (differs) diff++;
+    }
+    const d = this.$('#s_diff');
+    if (d) { d.textContent = diff ? `${diff} ${this.t('differ')}` : this.t('allSame'); d.className = 'pill' + (diff ? ' o' : ''); }
+  }
+  _renderLog() {
+    const el = this.$('#s_log'), c = this.$('#s_logc');
+    if (!el || !this._setLog) return;
+    c.style.display = this._setLog.length ? 'block' : 'none';
+    el.innerHTML = this._setLog.slice().reverse().map((r) => `<div class="${r.st}"><span>${esc(r.time)}</span><span>#${r.i + 1}</span><span>${esc(r.what)}</span><b>${esc(r.msg)}</b></div>`).join('');
+  }
+  _modal(title, html, ok) {
+    const md = this.$('#s_modal');
+    this.$('#s_mt').textContent = title;
+    this.$('#s_mb').innerHTML = html;
+    md.hidden = false;
+    const close = () => { md.hidden = true; this.$('#s_yes').onclick = null; };
+    this.$('#s_no').onclick = close;
+    this.$('#s_yes').onclick = () => { close(); ok(); };
+  }
+  _askSet(k, i, value) {
+    if (this._busy || value == null || value === '') return;
+    const targets = (i == null ? this.sets.map((x, n) => [n, x[k]]) : [[i, this.sets[i][k]]]).filter(([, id]) => id);
+    const st = this._hass.states[targets[0][1]];
+    if (st && st.entity_id.startsWith('number.')) {
+      const v = parseFloat(value), a = st.attributes;
+      if (!isNum(v) || v < a.min || v > a.max) return;
+    }
+    const u = st && st.attributes.unit_of_measurement ? ' ' + st.attributes.unit_of_measurement : '';
+    const list = targets.map(([n, id]) => `<li>#${n + 1}: ${esc(this.setText(id) ?? '–')} → <b>${esc(value + (id.startsWith('number.') ? u : ''))}</b>${this.sameVal(id, value) ? ' ✓' : ''}</li>`).join('');
+    this._modal(this.t('confirmTitle'), `<p><b>${esc(this.setLabel(k))}</b></p><ul>${list}</ul><p class="note">${esc(this.t('confirmNote'))}</p>`,
+      () => this._runSet(k, targets.filter(([, id]) => !this.sameVal(id, value)), value));
+  }
+  _askClock() {
+    if (this._busy) return;
+    const btns = this.sets.map((x, n) => [n, x.sync_clock]).filter(([, id]) => id);
+    this._modal(this.t('confirmTitle'), `<p>${esc(this.t('syncClockQ'))}</p>`, async () => {
+      for (const [n, id] of btns) {
+        try { await this._hass.callService('button', 'press', { entity_id: id }); this._logSet(n, this.t('invClock'), this.t('confirmed'), 'ok'); }
+        catch (e) { this._logSet(n, this.t('invClock'), e.message || String(e), 'bad'); }
+      }
+    });
+  }
+  _logSet(i, what, msg, st) {
+    this._setLog = this._setLog || [];
+    this._setLog.push({ i, what, msg, st, time: new Date().toLocaleTimeString(this.lang, { hour: '2-digit', minute: '2-digit', second: '2-digit' }) });
+    if (this._setLog.length > 50) this._setLog.shift();
+    this._renderLog();
+  }
+  async _runSet(k, targets, value) {
+    this._busy = true; this._edit = null; this._pending = {};
+    targets.forEach(([n]) => { this._pending[k + '/' + n] = value; });
+    this._liveSettings();
+    const label = this.setLabel(k);
+    for (const [n, id] of targets) {
+      const what = `${label}: ${this.setText(id) ?? '–'} → ${value}`;
+      if (!this.setState(id)) { this._logSet(n, what, this.t('unavailable'), 'bad'); delete this._pending[k + '/' + n]; continue; }
+      this._logSet(n, what, this.t('waiting'), 'wait');
+      const row = this._setLog[this._setLog.length - 1];
+      try {
+        if (id.startsWith('select.')) await this._hass.callService('select', 'select_option', { entity_id: id, option: value });
+        else await this._hass.callService('number', 'set_value', { entity_id: id, value: parseFloat(value) });
+        const t0 = Date.now();
+        while (!this.sameVal(id, value) && Date.now() - t0 < 90000) await new Promise((r) => setTimeout(r, 1000));
+        if (this.sameVal(id, value)) { row.msg = this.t('confirmed'); row.st = 'ok'; }
+        else {
+          const why = this.txt((this.invs[n] || {}).last_set);
+          row.msg = this.t('notConfirmed') + (why ? ' · ' + why : ''); row.st = 'bad';
+          this._renderLog();
+          break;                      // stop: do not change the others when one did not take the value
+        }
+      } catch (e) { row.msg = e.message || String(e); row.st = 'bad'; this._renderLog(); break; }
+      delete this._pending[k + '/' + n];
+      this._renderLog();
+      this._liveSettings();
+    }
+    this._pending = {}; this._busy = false;
+    if (this._tab === 'settings') this._liveSettings();
   }
 
   /* ================================================================= battery */

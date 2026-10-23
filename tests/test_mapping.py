@@ -46,6 +46,7 @@ def test_dongle_map():
     assert inv["bat_w"] == "sensor.growatt_1_battery_power"
     assert mp["energy"]["grid_in"] == ["sensor.growatt_1_ac_discharge_energy_total", "sensor.growatt_1_ac_charge_energy_total"]
     assert mp["system"] == {}
+    assert mp["settings"] == [{}]
     assert m.missing(mp) == []
 
 
@@ -65,6 +66,29 @@ def test_manual_only():
     mp = m.build_map("manual", {}, 1, {"pv": "sensor.pv", "load": "sensor.load", "soc": "sensor.soc", "energy_pv": "sensor.e"})
     assert mp["inverters"] == [{}]
     assert m.missing(mp) == []
+
+
+CTRL = {}
+for i in (1, 2, 3):
+    CTRL[f"inverter_{i}_output_source_priority"] = f"select.sa_inv{i}_osp"
+    CTRL[f"inverter_{i}_max_charge_current"] = f"number.sa_inv{i}_mcc"
+    CTRL[f"growatt_{i}_back_to_battery_capacity"] = f"number.growatt_{i}_btb"
+    CTRL[f"growatt_{i}_sync_clock"] = f"button.growatt_{i}_sync_clock"
+CTRL["inverter_1_serial_number"] = "sensor.not_a_control"
+
+
+def test_settings_sa():
+    mp = m.build_map("solar_assistant", ALL, 3, None, CTRL)
+    assert mp["settings"][2] == {"output_source_priority": "select.sa_inv3_osp", "max_charge_current": "number.sa_inv3_mcc"}
+    assert "battery_type" in mp["settings_locked"]
+
+
+def test_settings_dongle_and_bms():
+    uids = {**DG, "growatt_2_output_power": "sensor.g2", "growatt_2_bms_soc": "sensor.g2_bms_soc", "growatt_2_bms_cell_delta": "sensor.g2_delta"}
+    mp = m.build_map("donglegrowatt", uids, 2, None, CTRL)
+    assert mp["settings"][0] == {"back_to_battery_capacity": "number.growatt_1_btb", "sync_clock": "button.growatt_1_sync_clock"}
+    assert mp["system"] == {"soc": "sensor.g2_bms_soc", "cell_imb": "sensor.g2_delta"}
+    assert mp["inverters"][0]["serial"] == "sensor.growatt_1_serial_number"
 
 
 if __name__ == "__main__":

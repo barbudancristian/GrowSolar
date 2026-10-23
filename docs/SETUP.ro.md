@@ -12,9 +12,10 @@ Ghidul explică instalarea GrowSolar, fiecare opțiune din fereastra *Add integr
 4. [Pasul 2: sistemul](#4-pasul-2-sistemul)
 5. [Pasul 3: senzorii (sursa manuală)](#5-pasul-3-senzorii-sursa-manuală)
 6. [Prognoza solară și vremea](#6-prognoza-solară-și-vremea)
-7. [Modificarea setărilor mai târziu](#7-modificarea-setărilor-mai-târziu)
-8. [Probleme frecvente](#8-probleme-frecvente)
-9. [Dezinstalare](#9-dezinstalare)
+7. [Setările invertoarelor](#7-setările-invertoarelor)
+8. [Modificarea setărilor mai târziu](#8-modificarea-setărilor-mai-târziu)
+9. [Probleme frecvente](#9-probleme-frecvente)
+10. [Dezinstalare](#10-dezinstalare)
 
 ## 1. Înainte de început
 
@@ -127,13 +128,29 @@ Numele diferă între integrări și versiuni; contează sensul și unitatea.
 - **Curba de prognoză, *Rămas*, *Mâine*.** GrowSolar folosește prognoza solară pe care Home Assistant o are deja în **Settings → Dashboards → Energy → Solar panels → Solar production forecast**: **Solcast** (pe intervale de 30 de minute) sau **Forecast.Solar** (pe ore). Instalezi integrarea preferată și o adaugi acolo. Fără prognoză, când sursa e Solar Assistant se folosește prognoza lui.
 - **Norii și iconițele.** Norii până la ora curentă vin din Solar Assistant (dacă e sursa); după ora curentă vin din prognoza pe ore a entității de vreme.
 
-## 7. Modificarea setărilor mai târziu
+## 7. Setările invertoarelor
+
+Pagina **Setări** arată toate setările invertoarelor una lângă alta, câte o coloană pe invertor, și colorează cu portocaliu ce diferă între invertoare (invertoarele în paralel ar trebui să aibă aceleași valori).
+
+- **Schimbi un invertor:** apeși pe valoarea lui, alegi valoarea nouă, **Salvează**.
+- **Schimbi toate:** alegi valoarea în coloana *Toate invertoarele*, **Aplică pe toate**.
+
+Înainte să trimită ceva, o fereastră arată valoarea veche și cea nouă pentru fiecare invertor. Invertoarele se schimbă **pe rând**: GrowSolar așteaptă până când invertorul raportează valoarea nouă (cel mult 90 s) și abia apoi o trimite pe următoarea; dacă un invertor nu o primește, **se oprește**. Lista *Modificări* arată fiecare pas și rezultatul lui. Doar administratorii Home Assistant pot schimba setări.
+
+De unde vin setările:
+
+- **Solar Assistant:** entitățile select / number din descoperirea lui MQTT (`inverter_N_…`), deci pagina merge imediat după configurarea GrowSolar.
+- **DongleGrowatt:** entitățile din pachetul Growatt-SPF6K-HA, versiunea 0.2 sau mai nouă (`growatt_N_…`). Pe fiecare dongle bifezi **Allow inverter settings changes from Home Assistant** în *Dongle settings*. Dongle-ul acceptă doar o listă sigură de setări, în limitele din manual, și recitește fiecare valoare; dacă refuză, motivul apare lângă *neconfirmat*. Cu dongle-ul ai în plus prioritatea energiei (BLU / LBU), intervalul de intrare AC, orele rețelei, buzzer-ul și un buton care pune ora pe ceasurile invertoarelor.
+
+Tipul bateriei și pornirea / oprirea la distanță se văd, dar nu se pot schimba de aici: o valoare greșită poate rupe legătura cu BMS-ul sau poate opri ieșirea. După ce adaugi sau scoți entități de setare, reîncarci GrowSolar (**Settings → Devices & services → GrowSolar → ⋮ → Reload**).
+
+## 8. Modificarea setărilor mai târziu
 
 **Settings → Devices & services → GrowSolar → Configure.** Prima fereastră are setările sistemului și arată ce senzori nu au fost găsiți. A doua fereastră îți permite, pentru orice sursă, să adaugi sau să înlocuiești senzori individuali, să bifezi inversarea semnului și să alegi entitatea de vreme. După **Submit**, pagina se reîncarcă singură.
 
 Ca să schimbi **sursa datelor**, ștergi GrowSolar (⋮ → **Delete**) și îl adaugi din nou.
 
-## 8. Probleme frecvente
+## 9. Probleme frecvente
 
 | Ce vezi | Cauza și soluția |
 | --- | --- |
@@ -149,6 +166,6 @@ Ca să schimbi **sursa datelor**, ștergi GrowSolar (⋮ → **Delete**) și îl
 
 Dacă problema rămâne, deschide un issue pe GitHub cu o captură și cu rândurile despre `growsolar` din **Settings → System → Logs**.
 
-## 9. Dezinstalare
+## 10. Dezinstalare
 
 **Settings → Devices & services → GrowSolar → ⋮ → Delete**, apoi **HACS → GrowSolar → ⋮ → Remove** și restart. GrowSolar nu creează entități și nu îți modifică datele, deci nu rămâne nimic în urmă.

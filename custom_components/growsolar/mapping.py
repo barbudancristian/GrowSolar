@@ -43,7 +43,60 @@ DONGLE_INVERTER = {
     "mode": "status_text",
     "out_prio": "output_priority",
     "chg_prio": "charger_priority",
+    "bat_a": "battery_current",        # + charging
+    "serial": "serial_number",
+    "fw": "firmware",
+    "clock": "inverter_clock",
+    "temp_mppt1": "mppt1_temperature",
+    "temp_mppt2": "mppt2_temperature",
+    "fan": "fan_inverter",
+    "last_set": "last_setting_change",
 }
+# BMS sensors, published by the dongle of the inverter wired to the battery
+DONGLE_BMS = {
+    "soc": "bms_soc",
+    "soh": "bms_soh",
+    "bat_v": "bms_voltage",
+    "bat_a": "bms_current",
+    "bat_temp": "bms_temperature",
+    "cycles": "bms_cycles",
+    "cell_hi": "bms_cell_max",
+    "cell_lo": "bms_cell_min",
+    "cell_imb": "bms_cell_delta",
+}
+
+# ---- Inverter settings (select / number entities) ----
+# Same names in Solar Assistant (inverter_<n>_<name>) and in the DongleGrowatt
+# package (growatt_<n>_<name>). The panel shows every one it finds; values that
+# can stop the output or the BMS link are shown but cannot be changed there.
+SETTINGS = [
+    "output_source_priority",
+    "charger_source_priority",
+    "energy_priority",
+    "max_charge_current",
+    "max_grid_charge_current",
+    "max_generator_charge_current",
+    "battery_absorption_charge_voltage",
+    "battery_float_charge_voltage",
+    "to_grid_battery_capacity",
+    "back_to_battery_capacity",
+    "shutdown_battery_capacity",
+    "to_grid_battery_voltage",
+    "back_to_battery_voltage",
+    "shutdown_battery_voltage",
+    "ac_input_range",
+    "grid_output_start_hour",
+    "grid_output_stop_hour",
+    "grid_charge_start_hour",
+    "grid_charge_stop_hour",
+    "power_saving",
+    "buzzer",
+    "overload_restart",
+    "overtemperature_restart",
+    "battery_type",
+    "remote_switch",
+]
+SETTINGS_LOCKED = ["battery_type", "remote_switch"]
 DONGLE_ENERGY = {
     # cumulative counters, one per inverter; the panel takes the daily change
     "pv": ["pv_energy_total"],
@@ -129,11 +182,31 @@ def detect_inverters(source: str, uids: dict[str, str]) -> int:
     return n
 
 
-def build_map(source: str, uids: dict[str, str], inverters: int, manual: dict | None = None) -> dict:
+def build_settings(source: str, ctrl: dict[str, str], inverters: int) -> list[dict]:
+    """Per inverter: setting name -> select / number entity, plus the clock button."""
+    prefix = {SOURCE_DONGLE: "growatt", SOURCE_SA: "inverter"}.get(source)
+    out: list[dict] = []
+    for i in range(1, inverters + 1):
+        found: dict = {}
+        if prefix:
+            for name in SETTINGS:
+                ent = ctrl.get(f"{prefix}_{i}_{name}")
+                if ent and ent.split(".")[0] in ("select", "number"):
+                    found[name] = ent
+            btn = ctrl.get(f"{prefix}_{i}_sync_clock")
+            if btn:
+                found["sync_clock"] = btn
+        out.append(found)
+    return out
+
+
+def build_map(source: str, uids: dict[str, str], inverters: int, manual: dict | None = None,
+              ctrl: dict[str, str] | None = None) -> dict:
     """Return the entity map used by the panel.
 
     ``uids`` maps the unique id of every MQTT sensor to its entity id.
     ``manual`` holds entities chosen by hand; they win over the automatic ones.
+    ``ctrl`` maps the unique id of every MQTT select / number / button to its entity id.
     """
     inv_list: list[dict] = []
     system: dict = {}
@@ -157,6 +230,15 @@ def build_map(source: str, uids: dict[str, str], inverters: int, manual: dict | 
                 if ent:
                     inv[key] = ent
         inv_list.append(inv)
+
+    if source == SOURCE_DONGLE:
+        for i in range(1, inverters + 1):
+            if f"growatt_{i}_bms_soc" in uids:
+                for key, suffix in DONGLE_BMS.items():
+                    ent = uids.get(f"growatt_{i}_{suffix}")
+                    if ent:
+                        system[key] = ent
+                break
 
     if source == SOURCE_SA:
         for key, uid in SA_SYSTEM.items():
@@ -188,6 +270,8 @@ def build_map(source: str, uids: dict[str, str], inverters: int, manual: dict | 
         "energy_daily_reset": source == SOURCE_SA,
         # invert_bat / invert_grid: the chosen sensors use the opposite sign
         "options": options,
+        "settings": build_settings(source, ctrl or {}, inverters),
+        "settings_locked": SETTINGS_LOCKED,
     }
 
 

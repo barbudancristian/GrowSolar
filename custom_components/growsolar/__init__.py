@@ -43,6 +43,16 @@ def mqtt_unique_ids(hass: HomeAssistant) -> dict[str, str]:
     }
 
 
+def mqtt_control_ids(hass: HomeAssistant) -> dict[str, str]:
+    """unique_id -> entity_id for the MQTT select, number and button entities (inverter settings)."""
+    reg = er.async_get(hass)
+    return {
+        e.unique_id: e.entity_id
+        for e in reg.entities.values()
+        if e.platform == "mqtt" and e.domain in ("select", "number", "button") and e.disabled_by is None
+    }
+
+
 def entry_settings(entry: ConfigEntry) -> dict:
     """Settings from the entry, options winning over the original data."""
     return {**entry.data, **entry.options}
@@ -63,7 +73,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     await _register_static(hass)
     s = entry_settings(entry)
     entity_map = build_map(
-        s[CONF_SOURCE], mqtt_unique_ids(hass), int(s[CONF_INVERTERS]), s.get(CONF_MANUAL)
+        s[CONF_SOURCE], mqtt_unique_ids(hass), int(s[CONF_INVERTERS]), s.get(CONF_MANUAL),
+        mqtt_control_ids(hass),
     )
     title = s.get(CONF_TITLE) or "GrowSolar"
     if PANEL_URL in hass.data.get("frontend_panels", {}):
