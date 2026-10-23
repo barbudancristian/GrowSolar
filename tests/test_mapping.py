@@ -104,6 +104,15 @@ def test_order_and_names():
     assert m.parse_names("", 2) == ["#1", "#2"]
 
 
+
+def test_sa_with_dongle_bms():
+    uids = {**ALL, "growatt_1_bms_soc": "sensor.g1_bms_soc", "growatt_1_bms_temperature": "sensor.g1_bms_t", "growatt_1_bms_max_charge_current": "sensor.g1_bms_a"}
+    mp = m.build_map("solar_assistant", uids, 3)
+    assert mp["system"]["bat_temp"] == "sensor.g1_bms_t"
+    assert mp["system"]["bms_chg_a"] == "sensor.g1_bms_a"
+    assert mp["system"]["soc"] == "sensor.sa_battery_1_state_of_charge"   # Solar Assistant's own value wins
+
+
 if __name__ == "__main__":
     for k, f in list(globals().items()):
         if k.startswith("test_"):

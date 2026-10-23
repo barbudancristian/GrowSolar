@@ -7,7 +7,7 @@
  * SPDX-License-Identifier: MIT
  */
 (() => {
-const VERSION = '0.2.1';
+const VERSION = '0.2.2';
 
 /* ------------------------------------------------------------------ texts */
 const STR = {
@@ -41,6 +41,8 @@ const STR = {
     waiting: 'waiting for the inverter…', confirmed: 'confirmed', notConfirmed: 'not confirmed', unavailable: 'not available',
     syncClock: 'Set the inverter clocks from Home Assistant', syncClockQ: 'Set the clock of every inverter to the current time?',
     readOnly: 'read only', noSettings: 'No setting entities were found. With Solar Assistant they come from its MQTT discovery; with DongleGrowatt from the Growatt-SPF6K-HA package (version 0.2 or newer), after ticking "Allow inverter settings changes" on each dongle. Reload GrowSolar after adding them.',
+    bmsChgA: 'BMS charge current limit', bmsChgV: 'BMS charge voltage', bmsCodes: 'BMS status · error · warning',
+    chargedToday: 'Charged today', dischargedToday: 'Discharged today', none: 'none', tempNote: 'Temperature: best 15–35 °C; charging only between 0 and 55 °C (BMS limits; EVE LF304 cells: charge −10…65 °C, discharge −35…65 °C).',
     adminOnly: 'Only administrators can change the settings.', log: 'Changes', locked: 'Shown only: changing it here could switch the output off or stop the BMS link.'
   },
   ro: {
@@ -73,6 +75,8 @@ const STR = {
     waiting: 'aștept invertorul…', confirmed: 'confirmat', notConfirmed: 'neconfirmat', unavailable: 'indisponibil',
     syncClock: 'Pune ora din Home Assistant pe invertoare', syncClockQ: 'Pun ora curentă pe ceasul fiecărui invertor?',
     readOnly: 'doar citire', noSettings: 'Nu am găsit entități de setare. Cu Solar Assistant vin din descoperirea lui MQTT; cu DongleGrowatt din pachetul Growatt-SPF6K-HA (versiunea 0.2 sau mai nouă), după ce bifezi „Allow inverter settings changes” pe fiecare dongle. Reîncarcă GrowSolar după ce le adaugi.',
+    bmsChgA: 'Limită curent încărcare BMS', bmsChgV: 'Tensiune încărcare BMS', bmsCodes: 'BMS stare · eroare · avertizare',
+    chargedToday: 'Încărcat azi', dischargedToday: 'Descărcat azi', none: 'niciuna', tempNote: 'Temperatură: ideal 15–35 °C; încărcare doar între 0 și 55 °C (limite BMS; celulele EVE LF304: încărcare −10…65 °C, descărcare −35…65 °C).',
     adminOnly: 'Doar administratorii pot schimba setările.', log: 'Modificări', locked: 'Doar afișat: schimbarea de aici ar putea opri ieșirea sau legătura cu BMS-ul.'
   }
 };
@@ -1213,9 +1217,18 @@ class GrowSolarPanel extends HTMLElement {
   _battery(m) {
     m.innerHTML = `<div class="grid2"><section class="card"><h2>${this.t('battery')}<span class="sp"></span><span class="pill" id="b_state"></span></h2><div class="kv" id="b_kv"></div></section>
       <section class="card" id="b_bars"></section></div>`;
+    this._loadBatE();
+  }
+  async _loadBatE() {
+    const e = {};
+    for (const k of ['bat_in', 'bat_out']) { try { e[k] = await this.energyToday(k); } catch (x) { e[k] = NaN; } }
+    this._batE = e; this._batEt = Date.now();
+    if (this._tab === 'battery') this._liveBattery();
   }
   _liveBattery() {
     const s = this.sys, T = (k) => this.t(k);
+    if (Date.now() - (this._batEt || 0) > 60000) { this._batEt = Date.now(); this._loadBatE(); }
+    const be = this._batE || {};
     const soc = this.liveVal('soc'), bw = this.liveVal('bat'), bv = this.liveVal('batv');
     let ba = this.liveVal('bata'); if (!isNum(ba) && isNum(bw) && isNum(bv) && bv > 0) ba = bw / bv;
     const ah = this.num(s.capacity_ah), kwh = this._cfg.battery_kwh || (isNum(ah) && isNum(bv) ? ah * bv / 1000 : NaN);
@@ -1236,22 +1249,38 @@ class GrowSolarPanel extends HTMLElement {
       [T('cellV') + ' · ' + T('highest'), s.cell_hi ? fmtNum(this.num(s.cell_hi), 3) + ' V' : null],
       [T('cellV') + ' · ' + T('lowest'), s.cell_lo ? fmtNum(this.num(s.cell_lo), 3) + ' V' : null],
       [T('cellV') + ' · ' + T('imbalance'), s.cell_imb ? fmtNum(this.num(s.cell_imb), 3) + ' V' : null],
-      [T('temperature'), isNum(this.num(s.bat_temp)) ? fmtNum(this.num(s.bat_temp), 1) + ' °C' : null]
+      [T('temperature'), isNum(this.num(s.bat_temp)) ? fmtNum(this.num(s.bat_temp), 1) + ' °C' : null],
+      [T('chargedToday'), isNum(be.bat_in) ? be.bat_in.toFixed(1) + ' kWh' : null],
+      [T('dischargedToday'), isNum(be.bat_out) ? be.bat_out.toFixed(1) + ' kWh' : null],
+      [T('bmsChgA'), isNum(this.num(s.bms_chg_a)) ? fmtNum(this.num(s.bms_chg_a)) + ' A' : null],
+      [T('bmsChgV'), isNum(this.num(s.bms_chg_v)) ? fmtNum(this.num(s.bms_chg_v), 2) + ' V' : null],
+      [T('bmsCodes'), s.bms_status ? [s.bms_status, s.bms_error, s.bms_warning].map((id) => { const v = this.txt(id); return v == null ? '–' : v === '0' && id !== s.bms_status ? T('none') : v; }).join(' · ') : null]
     ].filter((x) => x[1] != null && !/^–/.test(x[1]));
     const kv = this.$('#b_kv'); if (kv) kv.innerHTML = items.map(([k, v]) => `<span>${esc(k)}</span><span>${esc(v)}</span>`).join('');
     const maxW = Math.max(1, this.invs.length) * 6000;
-    const bar = (label, v, lo, hi, color, txt) => {
+    const bar = (label, v, lo, hi, color, txt, marks) => {
       if (!isNum(v)) return '';
       const z = (0 - lo) / (hi - lo) * 100, p = (Math.max(lo, Math.min(hi, v)) - lo) / (hi - lo) * 100;
       const a = Math.min(z, p), w = Math.abs(p - z);
-      return `<div class="hb"><span>${esc(label)}</span><div class="t">${lo < 0 ? `<div class="z" style="left:${z}%"></div>` : ''}<i style="left:${lo < 0 ? a : 0}%;width:${lo < 0 ? w : p}%;background:${color}"></i></div><b>${esc(txt)}</b></div>`;
+      const fromZero = lo < 0 && !marks;          // power: grows from 0 both ways; temperature: from the left end
+      const tk = (marks || []).map((m) => `<div class="z" style="left:${(m - lo) / (hi - lo) * 100}%" title="${m} °C"></div>`).join('');
+      return `<div class="hb"><span>${esc(label)}</span><div class="t">${fromZero ? `<div class="z" style="left:${z}%"></div>` : ''}<i style="left:${fromZero ? a : 0}%;width:${fromZero ? w : p}%;background:${color}"></i>${tk}</div><b>${esc(txt)}</b></div>`;
     };
+    // LiFePO4 (EVE LF304): cells 2.5–3.65 V; normal use about 3.0–3.45 V
+    const cellCol = (v) => v < 2.9 || v > 3.6 ? COL.bad : v < 3.05 || v > 3.45 ? COL.pv : COL.bat;
+    const imbCol = (v) => v > 0.05 ? COL.bad : v > 0.03 ? COL.pv : COL.bat;
+    // charging is blocked by the BMS below 0 °C and above 55 °C; 15–35 °C is best for the cells
+    const tempCol = (v) => v < 0 || v > 55 ? COL.bad : v < 15 || v > 35 ? COL.pv : COL.bat;
+    const bt = this.num(s.bat_temp);
     const bb = this.$('#b_bars');
     if (bb) bb.innerHTML = bar(T('power'), bw, -maxW, maxW, bw >= 0 ? COL.bat : COL.pv, fmtW(bw)) +
       bar(T('soc'), soc, 0, 100, soc < 20 ? COL.bad : soc < 40 ? COL.pv : COL.bat, fmtNum(soc) + ' %') +
       bar(T('voltage'), bv, 40, 60, COL.load, fmtNum(bv, 1) + ' V') +
-      (s.bat_temp ? bar(T('temperature'), this.num(s.bat_temp), 0, 50, COL.pv, fmtNum(this.num(s.bat_temp), 1) + ' °C') : '') +
-      (s.cell_imb ? bar(T('cellV') + ' · ' + T('imbalance'), this.num(s.cell_imb), 0, 0.2, COL.grid, fmtNum(this.num(s.cell_imb), 3) + ' V') : '');
+      (s.cell_hi ? bar(T('cellV') + ' · ' + T('highest'), this.num(s.cell_hi), 2.5, 3.65, cellCol(this.num(s.cell_hi)), fmtNum(this.num(s.cell_hi), 3) + ' V') : '') +
+      (s.cell_lo ? bar(T('cellV') + ' · ' + T('lowest'), this.num(s.cell_lo), 2.5, 3.65, cellCol(this.num(s.cell_lo)), fmtNum(this.num(s.cell_lo), 3) + ' V') : '') +
+      (s.cell_imb ? bar(T('cellV') + ' · ' + T('imbalance'), this.num(s.cell_imb), 0, 0.1, imbCol(this.num(s.cell_imb)), fmtNum(this.num(s.cell_imb), 3) + ' V') : '') +
+      (isNum(bt) ? bar(T('temperature'), bt, -20, 65, tempCol(bt), fmtNum(bt, 1) + ' °C', [0, 15, 35, 55]) : '') +
+      (isNum(bt) ? `<p class="note">${esc(T('tempNote'))}</p>` : '');
   }
 }
 
