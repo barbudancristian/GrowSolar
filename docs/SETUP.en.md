@@ -12,9 +12,10 @@ This guide covers installing GrowSolar, every option in the *Add integration* di
 4. [Step 2: system](#4-step-2-system)
 5. [Step 3: entities (manual source)](#5-step-3-entities-manual-source)
 6. [Solar forecast and weather](#6-solar-forecast-and-weather)
-7. [Changing the settings later](#7-changing-the-settings-later)
-8. [Troubleshooting](#8-troubleshooting)
-9. [Remove GrowSolar](#9-remove-growsolar)
+7. [Inverter settings](#7-inverter-settings)
+8. [Changing the settings later](#8-changing-the-settings-later)
+9. [Troubleshooting](#9-troubleshooting)
+10. [Remove GrowSolar](#10-remove-growsolar)
 
 ## 1. Before you start
 
@@ -127,13 +128,29 @@ Names differ between integrations and versions; what matters is the meaning and 
 - **Forecast curve, *Remaining*, *Tomorrow*.** GrowSolar uses the solar forecast that Home Assistant already has in **Settings → Dashboards → Energy → Solar panels → Solar production forecast**: **Solcast** (30-minute steps) or **Forecast.Solar** (hourly). Install the integration you prefer and add it there. Without a forecast, the Solar Assistant prediction is used when that is the source.
 - **Cloud cover and icons.** The cloud cover up to now comes from Solar Assistant (if that is the source); after now it comes from the hourly forecast of the weather entity.
 
-## 7. Changing the settings later
+## 7. Inverter settings
+
+The **Settings** page shows every inverter setting side by side, one column per inverter, and marks in orange the ones that differ between inverters (parallel inverters should have the same values).
+
+- **Change one inverter:** click its value, pick the new one, **Save**.
+- **Change all:** pick the value in the *All inverters* column, **Apply to all**.
+
+Before anything is sent, a window lists the old and new value for each inverter. The inverters are changed **one after the other**: GrowSolar waits until the inverter reports the new value (up to 90 s) before it sends the next one, and **stops** if one inverter does not take it. The *Changes* list shows each step and its result. Only Home Assistant administrators can change settings.
+
+Where the settings come from:
+
+- **Solar Assistant:** the select / number entities from its MQTT discovery (`inverter_N_…`), so the page works as soon as GrowSolar is set up.
+- **DongleGrowatt:** the entities of the Growatt-SPF6K-HA package, version 0.2 or newer (`growatt_N_…`). On each dongle, tick **Allow inverter settings changes from Home Assistant** in *Dongle settings*. The dongle accepts only a safe list of settings within the manual's limits and reads each value back; if it refuses, the reason is shown next to *not confirmed*. With the dongle you also get the energy priority (BLU / LBU), the AC input range, the grid hours, the buzzer and a button that sets the inverter clocks.
+
+Battery type and remote on/off are shown but cannot be changed here: a wrong value can stop the BMS link or switch the output off. After you add or remove setting entities, reload GrowSolar (**Settings → Devices & services → GrowSolar → ⋮ → Reload**).
+
+## 8. Changing the settings later
 
 **Settings → Devices & services → GrowSolar → Configure.** The first window has the system settings and shows which sensors were not found. The second window lets you add or replace single sensors, the sign boxes and the weather entity, for every source. The page reloads by itself after **Submit**.
 
 To change the **data source**, delete GrowSolar (⋮ → **Delete**) and add it again.
 
-## 8. Troubleshooting
+## 9. Troubleshooting
 
 | What you see | Cause and fix |
 | --- | --- |
@@ -149,6 +166,6 @@ To change the **data source**, delete GrowSolar (⋮ → **Delete**) and add it 
 
 If the problem remains, open an issue on GitHub with a screenshot and the lines about `growsolar` from **Settings → System → Logs**.
 
-## 9. Remove GrowSolar
+## 10. Remove GrowSolar
 
 **Settings → Devices & services → GrowSolar → ⋮ → Delete**, then **HACS → GrowSolar → ⋮ → Remove** and restart. GrowSolar does not create entities or change your data, so nothing else is left behind.

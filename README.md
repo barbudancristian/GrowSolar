@@ -2,7 +2,7 @@
 
 # GrowSolar
 
-A solar dashboard for Home Assistant, made for **Growatt SPF** off-grid inverters (one or several, for example one per phase). It adds a **GrowSolar** page to the sidebar with five views: **Dashboard**, **Charts**, **Totals**, **Inverters** and **Battery**.
+A solar dashboard for Home Assistant, made for **Growatt SPF** off-grid inverters (one or several, for example one per phase). It adds a **GrowSolar** page to the sidebar with six views: **Dashboard**, **Charts**, **Totals**, **Inverters**, **Battery** and **Settings**.
 
 > **Română:** [README.ro.md](https://github.com/barbudancristian/GrowSolar/blob/main/README.ro.md)
 
@@ -38,6 +38,10 @@ The sensors are found automatically by their unique ids, so it does not matter h
 
 <img src="https://raw.githubusercontent.com/barbudancristian/GrowSolar/main/docs/img/battery.png" width="900" alt="Battery">
 
+**Settings**: every inverter setting side by side, with the ones that differ between inverters marked. Change one inverter, or **Apply to all** for parallel systems: GrowSolar shows what will change, sends it to one inverter at a time, waits until each one confirms the new value and stops if one does not. Works with the Solar Assistant setting entities and with DongleGrowatt (which adds BLU/LBU, AC input range, grid hours, buzzer and clock sync).
+
+<img src="https://raw.githubusercontent.com/barbudancristian/GrowSolar/main/docs/img/settings.png" width="900" alt="Settings">
+
 The page works on phones too, and in Romanian or English (from your Home Assistant profile language).
 
 <img src="https://raw.githubusercontent.com/barbudancristian/GrowSolar/main/docs/img/mobile.png" width="300" alt="On a phone">
@@ -67,7 +71,8 @@ You can change everything later from **Configure**, where you can also add or re
 - *Charts* use the history (up to 3 days) and the 5-minute or hourly statistics (longer ranges). *Totals* use the long-term statistics of the energy counters (`state_class: total_increasing`), so they fill up from the day the counters started.
 - Forecast: the dashed curve for the whole day, *Remaining* and *Tomorrow* come from the solar forecast in Home Assistant's Energy settings (**Solcast** or **Forecast.Solar**); without one, from Solar Assistant's own prediction. The cloud cover after the current hour and the weather icons come from a weather entity (the first one found, or the one chosen in Configure).
 - Sign convention in the page: battery power positive while charging, grid power positive while importing.
-- With DongleGrowatt the grid power is an estimate (grid to load in bypass plus grid charging), and *Battery charged* is not available because the inverter has no counter for it.
+- With DongleGrowatt, *Battery charged* is not available because the inverter has no counter for it. The battery page uses the BMS values (SOH, cycles, cells) from the dongle of the inverter wired to the BMS.
+- Only Home Assistant administrators can change inverter settings.
 - Everything stays in your Home Assistant. The page uses no internet services and no external libraries.
 
 ## Credits and license

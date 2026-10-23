@@ -2,7 +2,7 @@
 
 # GrowSolar
 
-Un dashboard solar pentru Home Assistant, făcut pentru invertoarele off-grid **Growatt SPF** (unul sau mai multe, de exemplu câte unul pe fiecare fază). Adaugă în bara laterală pagina **GrowSolar** cu cinci vederi: **Dashboard**, **Grafice**, **Totaluri**, **Invertoare** și **Baterie**.
+Un dashboard solar pentru Home Assistant, făcut pentru invertoarele off-grid **Growatt SPF** (unul sau mai multe, de exemplu câte unul pe fiecare fază). Adaugă în bara laterală pagina **GrowSolar** cu șase vederi: **Dashboard**, **Grafice**, **Totaluri**, **Invertoare**, **Baterie** și **Setări**.
 
 > **English:** [README.md](https://github.com/barbudancristian/GrowSolar/blob/main/README.md)
 
@@ -38,6 +38,10 @@ Senzorii sunt găsiți automat după ID-ul lor unic, deci nu contează cum i-ai 
 
 <img src="https://raw.githubusercontent.com/barbudancristian/GrowSolar/main/docs/img/battery.png" width="900" alt="Baterie">
 
+**Setări**: toate setările invertoarelor una lângă alta, cu cele care diferă între invertoare marcate. Schimbi un invertor sau **Aplică pe toate** pentru sistemele în paralel: GrowSolar arată ce se schimbă, trimite la câte un invertor pe rând, așteaptă confirmarea valorii noi de la fiecare și se oprește dacă unul nu o primește. Merge cu entitățile de setare din Solar Assistant și cu DongleGrowatt (care adaugă BLU/LBU, intervalul de intrare AC, orele rețelei, buzzer-ul și sincronizarea ceasului).
+
+<img src="https://raw.githubusercontent.com/barbudancristian/GrowSolar/main/docs/img/settings.png" width="900" alt="Setări">
+
 Pagina merge și pe telefon, în română sau engleză, după limba din profilul tău Home Assistant.
 
 <img src="https://raw.githubusercontent.com/barbudancristian/GrowSolar/main/docs/img/mobile.png" width="300" alt="Pe telefon">
@@ -67,7 +71,8 @@ Poți schimba totul mai târziu din **Configure**, unde poți și adăuga sau î
 - *Graficele* folosesc istoricul (până la 3 zile) și statisticile la 5 minute sau pe oră (pentru intervale mai lungi). *Totalurile* folosesc statisticile pe termen lung ale contoarelor de energie (`state_class: total_increasing`), deci se completează din ziua în care au pornit contoarele.
 - Prognoza: curba punctată pe toată ziua, *Rămas* și *Mâine* vin din prognoza solară din setările Energy ale Home Assistant (**Solcast** sau **Forecast.Solar**); fără ea, din prognoza Solar Assistant. Norii după ora curentă și iconițele de vreme vin dintr-o entitate de vreme (prima găsită sau cea aleasă în Configure).
 - Convenția de semn din pagină: puterea bateriei e pozitivă la încărcare, puterea rețelei e pozitivă când iei din rețea.
-- Cu DongleGrowatt puterea din rețea e o estimare (rețea spre consum în bypass plus încărcare din rețea), iar *Încărcat în baterie* lipsește, pentru că invertorul nu are contor pentru asta.
+- Cu DongleGrowatt, *Încărcat în baterie* lipsește, pentru că invertorul nu are contor pentru asta. Pagina bateriei folosește valorile BMS (SOH, cicluri, celule) de la dongle-ul invertorului legat la BMS.
+- Doar administratorii Home Assistant pot schimba setările invertoarelor.
 - Totul rămâne în Home Assistant-ul tău: pagina nu folosește servicii de pe internet și nici biblioteci externe.
 
 ## Credite și licență
