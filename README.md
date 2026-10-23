@@ -1,10 +1,10 @@
-<p align="center"><img src="docs/img/icon.png" width="96" alt="GrowSolar"></p>
+<p align="center"><img src="https://raw.githubusercontent.com/barbudancristian/GrowSolar/main/docs/img/icon.png" width="96" alt="GrowSolar"></p>
 
 # GrowSolar
 
 A solar dashboard for Home Assistant, made for **Growatt SPF** off-grid inverters (one or several, for example one per phase). It adds a **GrowSolar** page to the sidebar with five views: **Dashboard**, **Charts**, **Totals**, **Inverters** and **Battery**.
 
-> **Română:** [README.ro.md](README.ro.md)
+> **Română:** [README.ro.md](https://github.com/barbudancristian/GrowSolar/blob/main/README.ro.md)
 
 It reads the data from the sensors you already have in Home Assistant:
 
@@ -14,7 +14,7 @@ It reads the data from the sensors you already have in Home Assistant:
 
 The sensors are found automatically by their unique ids, so it does not matter how you renamed them.
 
-<img src="docs/img/dashboard.png" width="900" alt="GrowSolar dashboard">
+<img src="https://raw.githubusercontent.com/barbudancristian/GrowSolar/main/docs/img/dashboard.png" width="900" alt="GrowSolar dashboard">
 
 *Screenshots show sample data.*
 
@@ -24,23 +24,23 @@ The sensors are found automatically by their unique ids, so it does not matter h
 
 **Charts**: 1 h to 30 days, or a custom range, with ‹ › to move back and forward in time. Overview, battery power and state of charge with voltage. MPPT 1 and 2 voltage, current and power for each inverter. Total and per-inverter PV power, battery current and load. Battery voltage and temperature, AC output voltage, inverter temperature, grid voltage and frequency, bus voltage. Hover or tap a chart to read the values; click a legend entry to hide a line.
 
-<img src="docs/img/charts.png" width="900" alt="Charts">
+<img src="https://raw.githubusercontent.com/barbudancristian/GrowSolar/main/docs/img/charts.png" width="900" alt="Charts">
 
 **Totals**: the last 30 days and the last 12 months as bars, with a table of load, solar, battery charged and discharged, grid used and exported, and the savings at your energy price.
 
-<img src="docs/img/totals.png" width="900" alt="Totals">
+<img src="https://raw.githubusercontent.com/barbudancristian/GrowSolar/main/docs/img/totals.png" width="900" alt="Totals">
 
 **Inverters**: every value side by side for each inverter, with a total column: mode, temperature, bus voltage, load, AC output, PV per MPPT, battery, grid, priorities and serial number.
 
-<img src="docs/img/inverters.png" width="900" alt="Inverters">
+<img src="https://raw.githubusercontent.com/barbudancristian/GrowSolar/main/docs/img/inverters.png" width="900" alt="Inverters">
 
 **Battery**: capacity, state of charge and health, power, current, voltage, time to full or empty, cycles, cell voltages and imbalance, temperature.
 
-<img src="docs/img/battery.png" width="900" alt="Battery">
+<img src="https://raw.githubusercontent.com/barbudancristian/GrowSolar/main/docs/img/battery.png" width="900" alt="Battery">
 
 The page works on phones too, and in Romanian or English (from your Home Assistant profile language).
 
-<img src="docs/img/mobile.png" width="300" alt="On a phone">
+<img src="https://raw.githubusercontent.com/barbudancristian/GrowSolar/main/docs/img/mobile.png" width="300" alt="On a phone">
 
 ## Install with HACS
 
@@ -53,7 +53,7 @@ Manual install: copy `custom_components/growsolar` into your `config/custom_comp
 
 ## Setup
 
-Full guide with every option, the manual sensor choice and troubleshooting: **[docs/SETUP.en.md](docs/SETUP.en.md)**.
+Full guide with every option, the manual sensor choice and troubleshooting: **[docs/SETUP.en.md](https://github.com/barbudancristian/GrowSolar/blob/main/docs/SETUP.en.md)**.
 
 1. **Data source**: DongleGrowatt, Solar Assistant or manual. The dialog shows how many inverters it found for each source.
 2. **System**: name in the sidebar, number of inverters, battery capacity (kWh), solar array size (kWp, for the solar gauge), energy price and currency.
@@ -74,4 +74,4 @@ You can change everything later from **Configure**, where you can also add or re
 
 Author: **Barbu Dan-Cristian**. The visual style follows the Home Assistant solar dashboard by **Andrei Cristetiu**.
 
-MIT license, see [LICENSE](LICENSE). Not affiliated with Growatt or Solar Assistant; the names belong to their owners.
+MIT license, see [LICENSE](https://github.com/barbudancristian/GrowSolar/blob/main/LICENSE). Not affiliated with Growatt or Solar Assistant; the names belong to their owners.

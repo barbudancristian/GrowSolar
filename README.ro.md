@@ -1,10 +1,10 @@
-<p align="center"><img src="docs/img/icon.png" width="96" alt="GrowSolar"></p>
+<p align="center"><img src="https://raw.githubusercontent.com/barbudancristian/GrowSolar/main/docs/img/icon.png" width="96" alt="GrowSolar"></p>
 
 # GrowSolar
 
 Un dashboard solar pentru Home Assistant, făcut pentru invertoarele off-grid **Growatt SPF** (unul sau mai multe, de exemplu câte unul pe fiecare fază). Adaugă în bara laterală pagina **GrowSolar** cu cinci vederi: **Dashboard**, **Grafice**, **Totaluri**, **Invertoare** și **Baterie**.
 
-> **English:** [README.md](README.md)
+> **English:** [README.md](https://github.com/barbudancristian/GrowSolar/blob/main/README.md)
 
 Citește datele din senzorii pe care îi ai deja în Home Assistant:
 
@@ -14,7 +14,7 @@ Citește datele din senzorii pe care îi ai deja în Home Assistant:
 
 Senzorii sunt găsiți automat după ID-ul lor unic, deci nu contează cum i-ai redenumit.
 
-<img src="docs/img/dashboard.png" width="900" alt="Dashboard GrowSolar">
+<img src="https://raw.githubusercontent.com/barbudancristian/GrowSolar/main/docs/img/dashboard.png" width="900" alt="Dashboard GrowSolar">
 
 *Capturile arată date de exemplu.*
 
@@ -24,23 +24,23 @@ Senzorii sunt găsiți automat după ID-ul lor unic, deci nu contează cum i-ai 
 
 **Grafice**: de la 1 oră la 30 de zile sau un interval ales de tine, cu ‹ › ca să mergi înapoi și înainte în timp. Ansamblu, puterea și starea de încărcare a bateriei, cu tensiunea. Tensiunea, curentul și puterea pe MPPT 1 și 2 pentru fiecare invertor. Puterea solară, curentul bateriei și consumul, totale și pe fiecare invertor. Tensiunea și temperatura bateriei, tensiunea de ieșire AC, temperatura invertoarelor, tensiunea și frecvența rețelei, tensiunea bus. Ții degetul sau mouse-ul pe grafic ca să citești valorile; apeși pe o intrare din legendă ca să ascunzi linia.
 
-<img src="docs/img/charts.png" width="900" alt="Grafice">
+<img src="https://raw.githubusercontent.com/barbudancristian/GrowSolar/main/docs/img/charts.png" width="900" alt="Grafice">
 
 **Totaluri**: ultimele 30 de zile și ultimele 12 luni ca bare, cu un tabel cu consumul, producția solară, energia încărcată și descărcată din baterie, energia luată din rețea și trimisă în rețea, plus economiile la prețul tău.
 
-<img src="docs/img/totals.png" width="900" alt="Totaluri">
+<img src="https://raw.githubusercontent.com/barbudancristian/GrowSolar/main/docs/img/totals.png" width="900" alt="Totaluri">
 
 **Invertoare**: toate valorile, una lângă alta pentru fiecare invertor, cu o coloană de total: mod, temperatură, tensiune bus, consum, ieșire AC, PV pe fiecare MPPT, baterie, rețea, priorități și serie.
 
-<img src="docs/img/inverters.png" width="900" alt="Invertoare">
+<img src="https://raw.githubusercontent.com/barbudancristian/GrowSolar/main/docs/img/inverters.png" width="900" alt="Invertoare">
 
 **Baterie**: capacitate, stare de încărcare și de sănătate, putere, curent, tensiune, timpul până la plin sau gol, cicluri, tensiunile celulelor și dezechilibrul, temperatura.
 
-<img src="docs/img/battery.png" width="900" alt="Baterie">
+<img src="https://raw.githubusercontent.com/barbudancristian/GrowSolar/main/docs/img/battery.png" width="900" alt="Baterie">
 
 Pagina merge și pe telefon, în română sau engleză, după limba din profilul tău Home Assistant.
 
-<img src="docs/img/mobile.png" width="300" alt="Pe telefon">
+<img src="https://raw.githubusercontent.com/barbudancristian/GrowSolar/main/docs/img/mobile.png" width="300" alt="Pe telefon">
 
 ## Instalare cu HACS
 
@@ -53,7 +53,7 @@ Instalare manuală: copiezi folderul `custom_components/growsolar` în `config/c
 
 ## Configurare
 
-Ghidul complet, cu toate opțiunile, alegerea manuală a senzorilor și problemele frecvente: **[docs/SETUP.ro.md](docs/SETUP.ro.md)**.
+Ghidul complet, cu toate opțiunile, alegerea manuală a senzorilor și problemele frecvente: **[docs/SETUP.ro.md](https://github.com/barbudancristian/GrowSolar/blob/main/docs/SETUP.ro.md)**.
 
 1. **Sursa datelor**: DongleGrowatt, Solar Assistant sau manual. Fereastra arată câte invertoare a găsit pentru fiecare sursă.
 2. **Sistem**: numele din bara laterală, numărul de invertoare, capacitatea bateriei (kWh), puterea panourilor (kWp, pentru indicatorul solar), prețul energiei și moneda.
@@ -74,4 +74,4 @@ Poți schimba totul mai târziu din **Configure**, unde poți și adăuga sau î
 
 Autor: **Barbu Dan-Cristian**. Stilul vizual urmează dashboard-ul solar pentru Home Assistant al lui **Andrei Cristetiu**.
 
-Licență MIT, vezi [LICENSE](LICENSE). Proiectul nu e afiliat cu Growatt sau Solar Assistant; numele aparțin proprietarilor lor.
+Licență MIT, vezi [LICENSE](https://github.com/barbudancristian/GrowSolar/blob/main/LICENSE). Proiectul nu e afiliat cu Growatt sau Solar Assistant; numele aparțin proprietarilor lor.
