@@ -7,7 +7,7 @@
  * SPDX-License-Identifier: MIT
  */
 (() => {
-const VERSION = '0.2.2';
+const VERSION = '0.2.3';
 
 /* ------------------------------------------------------------------ texts */
 const STR = {
@@ -433,19 +433,29 @@ class GrowSolarPanel extends HTMLElement {
     return out;
   }
   /* daily or monthly change of the energy counters (kWh): {start_ms: {pv, load, ...}} */
+  /* moment of the switch from Solar Assistant to the dongles (ms), or 0 */
+  get histUntil() { const h = this._map.history_until; return h ? Date.parse(h) : 0; }
   async energyStats(t0, t1, period) {
     const en = this.en, keys = Object.keys(en).filter((k) => en[k] && en[k].length);
-    const ids = [...new Set(keys.flatMap((k) => en[k]))];
+    // before the switch the energy comes from Solar Assistant's counters
+    const hu = this.histUntil, eh = hu && t0 < hu ? (this._map.energy_history || {}) : {};
+    const hkeys = Object.keys(eh).filter((k) => eh[k] && eh[k].length);
+    const ids = [...new Set([...keys.flatMap((k) => en[k]), ...hkeys.flatMap((k) => eh[k])])];
     if (!ids.length) return {};
     const r = await this.ws({ type: 'recorder/statistics_during_period', start_time: new Date(t0).toISOString(), end_time: new Date(t1).toISOString(),
       statistic_ids: ids, period, types: ['change'], units: { energy: 'kWh' } });
     const out = {};
-    for (const k of keys) for (const id of en[k]) for (const row of r[id] || []) {
-      const t = toMs(row.start), o = (out[t] = out[t] || {});
+    const add = (k, id, keep) => { for (const row of r[id] || []) {
+      const t = toMs(row.start);
+      if (!keep(t)) continue;
+      const o = (out[t] = out[t] || {});
       // a negative change is not energy: the statistic's sum was restarted (for example after
       // the sensor was excluded from the recorder for a while), so that period is unknown
       if (isNum(row.change) && row.change >= 0) o[k] = (o[k] || 0) + row.change;
-    }
+    } };
+    for (const k of keys) for (const id of en[k]) add(k, id, () => true);
+    // Solar Assistant rows that start before the switch; the dongles' counters start at the switch
+    for (const k of hkeys) for (const id of eh[k]) add(k, id, (t) => t < hu);
     return out;
   }
   /* energy of one key between two times, from the counters' history (works for both
@@ -471,7 +481,13 @@ class GrowSolarPanel extends HTMLElement {
     const ids = this.en[key] || [];
     if (!ids.length) return NaN;
     if (this._map.energy_daily_reset) return sum(ids.map((id) => this.num(id)));
-    return this.energyBetween(key, startOfDay(Date.now()), Date.now());
+    const d0 = startOfDay(Date.now()), hu = this.histUntil;
+    let e = await this.energyBetween(key, Math.max(d0, hu || 0), Date.now());
+    // switched from Solar Assistant today: add what its counters recorded before the switch
+    if (hu > d0 && (this._map.energy_history || {})[key]) {
+      try { const st = await this.energyStats(d0, hu, 'hour'); const h = sum(Object.entries(st).filter(([t]) => +t < hu).map(([, o]) => o[key])); if (isNum(h)) e = (isNum(e) ? e : 0) + h; } catch (x) { /* ignore */ }
+    }
+    return e;
   }
   /* energy of one past day, from history, falling back to the daily statistics */
   async energyDay(key, day0) {

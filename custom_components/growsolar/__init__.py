@@ -16,6 +16,7 @@ from .const import (
     CONF_CURRENCY,
     CONF_INVERTERS,
     CONF_MANUAL,
+    CONF_HISTORY_UNTIL,
     CONF_NAMES,
     CONF_ORDER,
     CONF_PRICE,
@@ -82,6 +83,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         s.get(CONF_ORDER),
         s.get(CONF_NAMES),
     )
+    # energy before this moment comes from the Solar Assistant counters (moved to the dongles)
+    entity_map["history_until"] = s.get(CONF_HISTORY_UNTIL) if entity_map.get("energy_history") else None
     title = s.get(CONF_TITLE) or "GrowSolar"
     if PANEL_URL in hass.data.get("frontend_panels", {}):
         frontend.async_remove_panel(hass, PANEL_URL)

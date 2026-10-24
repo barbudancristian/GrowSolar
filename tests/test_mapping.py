@@ -115,6 +115,14 @@ def test_sa_with_dongle_bms():
     assert mp["system"]["soc"] == "sensor.sa_battery_1_state_of_charge"   # Solar Assistant's own value wins
 
 
+
+def test_dongle_keeps_sa_energy_history():
+    mp = m.build_map("donglegrowatt", ALL, 1)
+    assert mp["energy_history"]["pv"] == ["sensor.sa_total_pv_energy"]
+    assert mp["energy_history"]["bat_in"] == ["sensor.sa_total_battery_energy_in"]
+    assert m.build_map("solar_assistant", ALL, 3)["energy_history"] == {}
+
+
 if __name__ == "__main__":
     for k, f in list(globals().items()):
         if k.startswith("test_"):
