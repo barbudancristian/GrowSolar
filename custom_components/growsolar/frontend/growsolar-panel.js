@@ -7,7 +7,7 @@
  * SPDX-License-Identifier: MIT
  */
 (() => {
-const VERSION = '0.2.5';
+const VERSION = '0.2.6';
 
 /* ------------------------------------------------------------------ texts */
 const STR = {
@@ -34,7 +34,7 @@ const STR = {
     noData: 'No data', noSetup: 'GrowSolar has no entities yet. Open Settings → Devices & services → GrowSolar → Configure.',
     kwhNote: 'Energy from the long-term statistics of the energy counters.', price: 'Price',
     perInv: 'Inverter', mppt: 'mppt', loading: 'Loading…',
-    csv: 'Download CSV', savMonth: 'Savings this month', savYear: 'Savings this year', savTotal: 'Total savings', since: 'since', byYear: 'By year', year: 'Year',
+    unzoom: 'Undo zoom', zoomHint: 'Drag across a chart to zoom all charts', csv: 'Download CSV', savMonth: 'Savings this month', savYear: 'Savings this year', savTotal: 'Total savings', since: 'since', byYear: 'By year', year: 'Year',
     settings: 'Settings', firmware: 'Firmware', invClock: 'Inverter clock', mpptTemp: 'MPPT temperature', fan: 'Fan',
     setting: 'Setting', allInv: 'All inverters', applyAll: 'Apply to all', edit: 'Change', cancel: 'Cancel', save: 'Save',
     confirmTitle: 'Change inverter settings?', confirmOk: 'Yes, change', confirmNote: 'The inverters are changed one after the other; each value is checked before the next one is sent.',
@@ -69,7 +69,7 @@ const STR = {
     noData: 'Fără date', noSetup: 'GrowSolar nu are încă entități. Deschide Setări → Dispozitive și servicii → GrowSolar → Configurează.',
     kwhNote: 'Energia vine din statisticile pe termen lung ale contoarelor de energie.', price: 'Preț',
     perInv: 'Invertor', mppt: 'mppt', loading: 'Se încarcă…',
-    csv: 'Descarcă CSV', savMonth: 'Economii luna aceasta', savYear: 'Economii anul acesta', savTotal: 'Economii totale', since: 'din', byYear: 'Pe ani', year: 'Anul',
+    unzoom: 'Anulează zoom', zoomHint: 'Trage peste un grafic ca să mărești toate graficele', csv: 'Descarcă CSV', savMonth: 'Economii luna aceasta', savYear: 'Economii anul acesta', savTotal: 'Economii totale', since: 'din', byYear: 'Pe ani', year: 'Anul',
     settings: 'Setări', firmware: 'Firmware', invClock: 'Ceas invertor', mpptTemp: 'Temperatură MPPT', fan: 'Ventilator',
     setting: 'Setare', allInv: 'Toate invertoarele', applyAll: 'Aplică pe toate', edit: 'Schimbă', cancel: 'Renunță', save: 'Salvează',
     confirmTitle: 'Schimbi setările invertoarelor?', confirmOk: 'Da, schimbă', confirmNote: 'Invertoarele se schimbă pe rând; fiecare valoare e verificată înainte să o trimit pe următoarea.',
@@ -259,6 +259,10 @@ td small{color:var(--mut);margin-left:6px;font-size:11px;background:rgba(255,209
 .tscroll th small{display:block;margin:2px 0 0;background:none;padding:0;font-weight:400;color:var(--mut)}
 .tscroll td.sv{color:#8ff0bb}
 .arrow.dl{display:inline-flex;align-items:center;padding:4px 8px}
+.zsel{fill:rgba(74,163,255,.18);stroke:#4aa3ff;stroke-width:1;pointer-events:none}
+.chart .hit{cursor:crosshair;touch-action:pan-y}
+.toolbar .hint{color:var(--mut);font-size:12px;opacity:.8}
+@media (max-width:700px){.toolbar .hint{display:none}}
 .sav{font-size:13px;letter-spacing:0;text-transform:none;color:var(--mut);background:rgba(53,208,127,.1);border:1px solid rgba(53,208,127,.25);border-radius:10px;padding:4px 10px;white-space:nowrap}
 .sav:empty{display:none}.sav b{color:#8ff0bb;font-size:15px;margin-left:4px}.sav small{margin-left:6px;font-size:11px}
 @media (max-width:900px){.tot{grid-template-columns:1fr}.tscroll{border-left:0;padding-left:0;max-height:none}}
@@ -641,9 +645,47 @@ class GrowSolarPanel extends HTMLElement {
       const px = X(i) / W * r.width, tw = tip.offsetWidth;
       tip.style.left = Math.min(r.width - tw, Math.max(0, px + (px > r.width / 2 ? -tw - 12 : 12))) + 'px';
       tip.style.top = '8px';
+      // the same moment on the other charts (to compare them)
+      if (cfg.onZoom) for (const h of this._charts || []) if (h !== host && h._showAt) h._showAt(t);
+    };
+    host._showAt = (t) => {
+      if (t == null || t < cfg.t0 || t > cfg.t1) { cur.style.display = 'none'; return; }
+      const i = Math.round((t - cfg.t0) / (cfg.t1 - cfg.t0) * (cfg.n - 1));
+      cur.setAttribute('x1', X(i)); cur.setAttribute('x2', X(i)); cur.style.display = '';
     };
     hit.addEventListener('pointermove', move); hit.addEventListener('pointerdown', move);
-    hit.addEventListener('pointerleave', () => { cur.style.display = 'none'; tip.style.display = 'none'; });
+    hit.addEventListener('pointerleave', () => {
+      cur.style.display = 'none'; tip.style.display = 'none';
+      if (cfg.onZoom) for (const h of this._charts || []) if (h !== host && h._showAt) h._showAt(null);
+    });
+    if (cfg.onZoom) {
+      // drag across the chart to zoom every chart to that time range
+      const toX = (ev) => { const r = svg.getBoundingClientRect(); return Math.max(m.l, Math.min(W - m.r, (ev.clientX - r.left) * W / r.width)); };
+      const toT = (x) => cfg.t0 + (cfg.t1 - cfg.t0) * (x - m.l) / (W - m.l - m.r);
+      let x0 = null, sel = null;
+      hit.addEventListener('pointerdown', (ev) => {
+        if (ev.button !== 0) return;
+        x0 = toX(ev);
+        hit.setPointerCapture(ev.pointerId);
+        sel = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+        sel.setAttribute('class', 'zsel'); sel.setAttribute('y', m.t); sel.setAttribute('height', H - m.t - m.b); sel.setAttribute('x', x0); sel.setAttribute('width', 0);
+        svg.insertBefore(sel, hit);
+      });
+      hit.addEventListener('pointermove', (ev) => {
+        if (x0 == null || !sel) return;
+        const x = toX(ev);
+        sel.setAttribute('x', Math.min(x0, x)); sel.setAttribute('width', Math.abs(x - x0));
+      });
+      const end = (ev) => {
+        if (x0 == null) return;
+        const x = toX(ev), a = toT(Math.min(x0, x)), b = toT(Math.max(x0, x));
+        x0 = null; if (sel) { sel.remove(); sel = null; }
+        // a click (no real drag) only shows the values
+        if ((b - a) / (cfg.t1 - cfg.t0) > 0.01 && b - a >= 2 * 60e3) cfg.onZoom(a, b);
+      };
+      hit.addEventListener('pointerup', end);
+      hit.addEventListener('pointercancel', () => { x0 = null; if (sel) { sel.remove(); sel = null; } });
+    }
   }
   /* grouped bar chart for totals: rows = [{t, label, values:{k:v}}], keys = [{k,name,color}] */
   bars(host, cfg) {
@@ -909,10 +951,13 @@ class GrowSolarPanel extends HTMLElement {
         <button class="arrow" id="r_prev">‹</button><button class="arrow" id="r_next">›</button>
         <span id="r_custom" style="display:${this._range === 'custom' ? 'flex' : 'none'};gap:8px;align-items:center">
           ${this.t('from')} <input type="datetime-local" id="r_from"> ${this.t('to')} <input type="datetime-local" id="r_to"> <button class="arrow" id="r_apply">${this.t('apply')}</button></span>
-        <span class="clock" id="r_label"></span>
+        <button class="arrow" id="r_unzoom" style="display:${(this._zoomStack || []).length ? '' : 'none'}">↺ ${this.t('unzoom')}</button>
+        <span class="clock" id="r_label"></span><span class="hint">${this.t('zoomHint')}</span>
       </div><div class="charts" id="charts"></div>`;
+    this.$('#r_unzoom').addEventListener('click', () => this._unzoom());
     m.querySelectorAll('.seg button').forEach((b) => b.addEventListener('click', () => {
-      this._range = b.dataset.r; this._rangeEnd = 0;
+      this._range = b.dataset.r; this._rangeEnd = 0; this._zoomStack = [];
+      const u = this.$('#r_unzoom'); if (u) u.style.display = 'none';
       m.querySelectorAll('.seg button').forEach((x) => x.classList.toggle('on', x === b));
       this.$('#r_custom').style.display = this._range === 'custom' ? 'flex' : 'none';
       if (this._range !== 'custom') this._loadCharts();
@@ -925,6 +970,31 @@ class GrowSolarPanel extends HTMLElement {
       if (isFinite(a) && isFinite(b) && b > a) { this._custom = [a, b]; this._loadCharts(); }
     });
     this._loadCharts();
+  }
+  /* zoom all charts to [a, b]; the previous view is kept for "undo zoom" */
+  _zoomTo(a, b) {
+    this._zoomStack = this._zoomStack || [];
+    this._zoomStack.push({ range: this._range, end: this._rangeEnd, custom: this._custom });
+    this._range = 'custom'; this._custom = [a, b];
+    this._syncRangeUi();
+    this._loadCharts();
+  }
+  _unzoom() {
+    const p = (this._zoomStack || []).pop();
+    if (!p) return;
+    this._range = p.range; this._rangeEnd = p.end; this._custom = p.custom;
+    this._syncRangeUi();
+    this._loadCharts();
+  }
+  _syncRangeUi() {
+    this.shadowRoot.querySelectorAll('.toolbar .seg button').forEach((x) => x.classList.toggle('on', x.dataset.r === this._range));
+    const c = this.$('#r_custom'); if (c) c.style.display = this._range === 'custom' ? 'flex' : 'none';
+    const u = this.$('#r_unzoom'); if (u) u.style.display = (this._zoomStack || []).length ? '' : 'none';
+    if (this._range === 'custom' && this._custom) {
+      const loc = (t) => { const d = new Date(t - new Date(t).getTimezoneOffset() * 60e3); return d.toISOString().slice(0, 16); };
+      const f = this.$('#r_from'), to = this.$('#r_to');
+      if (f) f.value = loc(this._custom[0]); if (to) to.value = loc(this._custom[1]);
+    }
   }
   _rangeMs() { const m = { '1h': 1, '3h': 3, '6h': 6, '12h': 12, '24h': 24, '3d': 72, '7d': 168, '30d': 720 }; return (m[this._range] || 24) * 3600e3; }
   _win() {
@@ -978,7 +1048,7 @@ class GrowSolarPanel extends HTMLElement {
         const series = d.series.map((s) => ({ ...s, data: this.seriesData(h, s.ids, s.how, t0, t1, n, s.scale || 1) }));
         if (!series.some((s) => s.data)) { el.closest('section').style.display = 'none'; continue; }
         el.closest('section').style.display = '';
-        this.chart(el, { id: d.id, t0, t1, n, unit: d.unit, unitR: d.unitR, dec: d.dec, signed: d.signed, zero: d.zero, series });
+        this.chart(el, { id: d.id, t0, t1, n, unit: d.unit, unitR: d.unitR, dec: d.dec, signed: d.signed, zero: d.zero, series, onZoom: (a, b) => this._zoomTo(a, b) });
       }
     } catch (e) { console.error('GrowSolar charts', e); }
   }
