@@ -26,7 +26,7 @@ Senzorii sunt găsiți automat după ID-ul lor unic, deci nu contează cum i-ai 
 
 <img src="https://raw.githubusercontent.com/barbudancristian/GrowSolar/main/docs/img/charts.png" width="900" alt="Grafice">
 
-**Totaluri**: ultimele 30 de zile și ultimele 12 luni ca grafice cu suprafețe colorate, lângă un tabel cu consumul, producția solară, energia încărcată și descărcată din baterie, energia luată din rețea și trimisă în rețea, plus economiile la prețul tău. Butonul de descărcare salvează fiecare tabel ca fișier CSV (aceleași coloane ca exportul Solar Assistant, în Wh).
+**Totaluri**: ultimele 30 de zile și ultimele 12 luni ca grafice cu suprafețe colorate, lângă un tabel cu consumul, producția solară, energia încărcată și descărcată din baterie, energia luată din rețea și trimisă în rețea, plus economiile la prețul tău. Deasupra graficelor: economiile din luna curentă și economiile totale de la prima lună înregistrată. Butonul de descărcare salvează fiecare tabel ca fișier CSV (aceleași coloane ca exportul Solar Assistant, în Wh).
 
 <img src="https://raw.githubusercontent.com/barbudancristian/GrowSolar/main/docs/img/totals.png" width="900" alt="Totaluri">
 

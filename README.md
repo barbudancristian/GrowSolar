@@ -26,7 +26,7 @@ The sensors are found automatically by their unique ids, so it does not matter h
 
 <img src="https://raw.githubusercontent.com/barbudancristian/GrowSolar/main/docs/img/charts.png" width="900" alt="Charts">
 
-**Totals**: the last 30 days and the last 12 months as filled area charts next to a table of load, solar, battery charged and discharged, grid used and exported, and the savings at your energy price. The download button saves each table as a CSV file (same columns as Solar Assistant's export, in Wh).
+**Totals**: the last 30 days and the last 12 months as filled area charts next to a table of load, solar, battery charged and discharged, grid used and exported, and the savings at your energy price. Above the charts: the savings of the current month and the total savings since the first recorded month. The download button saves each table as a CSV file (same columns as Solar Assistant's export, in Wh).
 
 <img src="https://raw.githubusercontent.com/barbudancristian/GrowSolar/main/docs/img/totals.png" width="900" alt="Totals">
 
