@@ -22,7 +22,7 @@ The sensors are found automatically by their unique ids, so it does not matter h
 
 **Dashboard**: inverter mode, today's solar energy and peak, grid voltage, battery voltage, state of charge and how fast it changes (%/h). Live gauges for load, solar, grid and battery. *PV today* with yesterday, generated, remaining and tomorrow, the power curve against the forecast and the cloud cover. Overview of load, grid and solar for the last 24 hours. Tap the inverter or battery tile to open its page.
 
-**Charts**: 1 h to 30 days, or a custom range, with ‹ › to move back and forward in time. Overview, battery power and state of charge with voltage. MPPT 1 and 2 voltage, current and power for each inverter. Total and per-inverter PV power, battery current and load. Battery voltage and temperature, AC output voltage, inverter temperature, grid voltage and frequency, bus voltage. Hover or tap a chart to read the values; click a legend entry to hide a line.
+**Charts**: 1 h to 30 days, or a custom range, with ‹ › to move back and forward in time. Overview, battery power and state of charge with voltage. MPPT 1 and 2 voltage, current and power for each inverter. Total and per-inverter PV power, battery current and load. Battery voltage and temperature, AC output voltage, inverter temperature, grid voltage and frequency, bus voltage. Hover or tap a chart to read the values (a line marks the same moment on every chart); click a legend entry to hide a line. Drag across any chart to zoom all charts to that time range, and *Undo zoom* to go back.
 
 <img src="https://raw.githubusercontent.com/barbudancristian/GrowSolar/main/docs/img/charts.png" width="900" alt="Charts">
 
