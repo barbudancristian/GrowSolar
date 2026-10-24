@@ -34,7 +34,7 @@ const STR = {
     noData: 'No data', noSetup: 'GrowSolar has no entities yet. Open Settings → Devices & services → GrowSolar → Configure.',
     kwhNote: 'Energy from the long-term statistics of the energy counters.', price: 'Price',
     perInv: 'Inverter', mppt: 'mppt', loading: 'Loading…',
-    csv: 'Download CSV',
+    csv: 'Download CSV', savMonth: 'Savings this month', savTotal: 'Total savings', since: 'since',
     settings: 'Settings', firmware: 'Firmware', invClock: 'Inverter clock', mpptTemp: 'MPPT temperature', fan: 'Fan',
     setting: 'Setting', allInv: 'All inverters', applyAll: 'Apply to all', edit: 'Change', cancel: 'Cancel', save: 'Save',
     confirmTitle: 'Change inverter settings?', confirmOk: 'Yes, change', confirmNote: 'The inverters are changed one after the other; each value is checked before the next one is sent.',
@@ -69,7 +69,7 @@ const STR = {
     noData: 'Fără date', noSetup: 'GrowSolar nu are încă entități. Deschide Setări → Dispozitive și servicii → GrowSolar → Configurează.',
     kwhNote: 'Energia vine din statisticile pe termen lung ale contoarelor de energie.', price: 'Preț',
     perInv: 'Invertor', mppt: 'mppt', loading: 'Se încarcă…',
-    csv: 'Descarcă CSV',
+    csv: 'Descarcă CSV', savMonth: 'Economii luna aceasta', savTotal: 'Economii totale', since: 'din',
     settings: 'Setări', firmware: 'Firmware', invClock: 'Ceas invertor', mpptTemp: 'Temperatură MPPT', fan: 'Ventilator',
     setting: 'Setare', allInv: 'Toate invertoarele', applyAll: 'Aplică pe toate', edit: 'Schimbă', cancel: 'Renunță', save: 'Salvează',
     confirmTitle: 'Schimbi setările invertoarelor?', confirmOk: 'Da, schimbă', confirmNote: 'Invertoarele se schimbă pe rând; fiecare valoare e verificată înainte să o trimit pe următoarea.',
@@ -254,8 +254,13 @@ td small{color:var(--mut);margin-left:6px;font-size:11px;background:rgba(255,209
 .kv span:nth-child(even){font-variant-numeric:tabular-nums}
 .tot{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);gap:16px;align-items:start}
 .tscroll{max-height:345px;overflow:auto;border-left:1px solid var(--line);padding-left:8px}
-.tscroll table th{position:sticky;top:0;background:#16295a;z-index:1}
+.tscroll table th{position:sticky;top:0;background:#16295a;z-index:1;white-space:normal;line-height:1.25;vertical-align:bottom}
+.tscroll th,.tscroll td{padding:7px 7px;font-size:13px}
+.tscroll th small{display:block;margin:2px 0 0;background:none;padding:0;font-weight:400;color:var(--mut)}
+.tscroll td.sv{color:#8ff0bb}
 .arrow.dl{display:inline-flex;align-items:center;padding:4px 8px}
+.sav{font-size:13px;letter-spacing:0;text-transform:none;color:var(--mut);background:rgba(53,208,127,.1);border:1px solid rgba(53,208,127,.25);border-radius:10px;padding:4px 10px;white-space:nowrap}
+.sav:empty{display:none}.sav b{color:#8ff0bb;font-size:15px;margin-left:4px}.sav small{margin-left:6px;font-size:11px}
 @media (max-width:900px){.tot{grid-template-columns:1fr}.tscroll{border-left:0;padding-left:0;max-height:none}}
 .note{color:var(--mut);font-size:13px;margin:10px 0 0;line-height:1.45}
 table.sets td.sv.click{cursor:pointer}table.sets td.sv.click:hover{background:rgba(74,111,208,.15)}
@@ -981,9 +986,9 @@ class GrowSolarPanel extends HTMLElement {
   /* ================================================================= totals */
   _totals(m) {
     const dl = (id) => `<button class="arrow dl" id="${id}" title="${esc(this.t('csv'))}"><svg viewBox="0 0 24 24" width="16" height="16"><path fill="currentColor" d="M12 3a1 1 0 0 1 1 1v9.6l3.3-3.3 1.4 1.4L12 17.4l-5.7-5.7 1.4-1.4 3.3 3.3V4a1 1 0 0 1 1-1zM5 19h14v2H5z"/></svg></button>`;
-    m.innerHTML = `<section class="card"><h2>${this.t('last30')}<span class="sp"></span>${dl('d_csv')}<button class="arrow" id="d_prev">‹</button><button class="arrow" id="d_next">›</button></h2>
+    m.innerHTML = `<section class="card"><h2>${this.t('last30')}<span class="sp"></span><span class="sav" id="d_sav"></span>${dl('d_csv')}<button class="arrow" id="d_prev">‹</button><button class="arrow" id="d_next">›</button></h2>
         <div class="tot"><div id="c_days"></div><div class="tscroll"><table id="t_days"></table></div></div></section>
-      <section class="card" style="margin-top:14px"><h2>${this.t('last12')}<span class="sp"></span>${dl('m_csv')}<button class="arrow" id="m_prev">‹</button><button class="arrow" id="m_next">›</button></h2>
+      <section class="card" style="margin-top:14px"><h2>${this.t('last12')}<span class="sp"></span><span class="sav" id="m_sav"></span>${dl('m_csv')}<button class="arrow" id="m_prev">‹</button><button class="arrow" id="m_next">›</button></h2>
         <div class="tot"><div id="c_months"></div><div class="tscroll"><table id="t_months"></table></div></div><div class="note">${this.t('kwhNote')}</div></section>`;
     this.$('#d_csv').addEventListener('click', () => this._csv('day'));
     this.$('#m_csv').addEventListener('click', () => this._csv('month'));
@@ -1030,6 +1035,7 @@ class GrowSolarPanel extends HTMLElement {
       }
       this._totRows = this._totRows || {};
       this._totRows[period] = rows;
+      if (period === 'month') this._savings(rows);
       this.bars(this.$(period === 'day' ? '#c_days' : '#c_months'), { id: period, rows, keys: keyset, area: true });
       const price = this._cfg.price || 0, cur = this._cfg.currency || '';
       const cols = [['load', 'load'], ['pv', 'solar'], ['bat_in', 'batCharged'], ['bat_out', 'batDischarged'], ['grid_in', 'gridUsed'], ['grid_out', 'gridExported']];
@@ -1037,10 +1043,31 @@ class GrowSolarPanel extends HTMLElement {
       const has = (k) => (this.en[k] || []).length || rows.some((r) => isNum(r.values[k]));
       const shown = cols.filter(([k]) => has(k));
       const tb = this.$(period === 'day' ? '#t_days' : '#t_months');
-      tb.innerHTML = `<tr><th>${this.t(period)}</th>${shown.map(([, l]) => `<th>${this.t(l)}</th>`).join('')}${price && has('load') ? `<th>${this.t('savings')}</th>` : ''}</tr>` +
+      // energy in kWh without the unit in every cell, so the savings column fits next to the chart
+      const kwh = (v) => (isNum(v) ? (Math.abs(v) >= 100 ? v.toFixed(0) : v.toFixed(1)) : '–');
+      tb.innerHTML = `<tr><th>${this.t(period)}<small>kWh</small></th>${shown.map(([, l]) => `<th>${this.t(l)}</th>`).join('')}${price && has('load') ? `<th>${this.t('savings')}<small>${esc(cur)}</small></th>` : ''}</tr>` +
         [...rows].reverse().map((r) => { const v = r.values, sav = isNum(v.load) ? (v.load - (v.grid_in || 0)) * price : NaN;
-          return `<tr><td>${esc(r.label)}</td>${shown.map(([k]) => `<td>${fmtKwh(v[k])}</td>`).join('')}${price && has('load') ? `<td>${isNum(sav) ? sav.toFixed(2) + ' ' + esc(cur) : '–'}</td>` : ''}</tr>`; }).join('');
+          return `<tr><td>${esc(r.label)}</td>${shown.map(([k]) => `<td>${kwh(v[k])}</td>`).join('')}${price && has('load') ? `<td class="sv">${isNum(sav) ? sav.toFixed(2) : '–'}</td>` : ''}</tr>`; }).join('');
     } catch (e) { console.error('GrowSolar totals', e); }
+  }
+  /* savings above the charts: this month (daily card) and since the first recorded month (monthly card) */
+  async _savings(rows) {
+    const price = this._cfg.price || 0, cur = this._cfg.currency || '';
+    const ds = this.$('#d_sav'), ms = this.$('#m_sav');
+    if (!price || !ds || !ms) return;
+    const sav = (v) => (isNum(v.load) ? (v.load - (v.grid_in || 0)) * price : NaN);
+    const m0 = new Date(new Date().getFullYear(), new Date().getMonth(), 1).getTime();
+    const curRow = rows.find((r) => r.t === m0);
+    const sm = curRow ? sav(curRow.values) : NaN;
+    ds.innerHTML = isNum(sm) ? `${esc(this.t('savMonth'))} <b>${sm.toFixed(2)} ${esc(cur)}</b>` : '';
+    try {
+      // every month with statistics; the current month comes from the row above (it includes today)
+      const st = await this.energyStats(new Date(2015, 0, 1).getTime(), m0, 'month');
+      let total = isNum(sm) ? sm : 0, first = curRow && isNum(sm) ? m0 : 0;
+      for (const [t, v] of Object.entries(st)) { const x = sav(v); if (isNum(x) && +t < m0) { total += x; if (!first || +t < first) first = +t; } }
+      const since = first ? new Date(first).toLocaleDateString(this.lang, { month: 'short', year: 'numeric' }) : '';
+      ms.innerHTML = first ? `${esc(this.t('savTotal'))} <b>${total.toFixed(2)} ${esc(cur)}</b><small>${esc(this.t('since'))} ${esc(since)}</small>` : '';
+    } catch (e) { ms.innerHTML = ''; }
   }
   /* CSV with the same columns as Solar Assistant's export (Wh), oldest row first */
   _csv(period) {
