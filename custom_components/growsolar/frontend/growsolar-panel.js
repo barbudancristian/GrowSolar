@@ -1065,7 +1065,7 @@ class GrowSolarPanel extends HTMLElement {
       // energy in kWh without the unit in every cell, so the savings column fits next to the chart
       const kwh = (v) => (isNum(v) ? (Math.abs(v) >= 100 ? v.toFixed(0) : v.toFixed(1)) : '–');
       const head = { day: 'day', month: 'month', year: 'year' }[period];
-      this.$(`#${period}_t`).innerHTML = `<tr><th>${this.t(head)}<small>kWh</small></th>${shown.map(([, l]) => `<th>${this.t(l)}</th>`).join('')}${price && has('load') ? `<th>${this.t('savings')}<small>${esc(cur)}</small></th>` : ''}</tr>` +
+      this.$(`#${period}_t`).innerHTML = `<tr><th>${this.t(head)}</th>${shown.map(([, l]) => `<th>${this.t(l)}<small>kWh</small></th>`).join('')}${price && has('load') ? `<th>${this.t('savings')}<small>${esc(cur)}</small></th>` : ''}</tr>` +
         [...rows].reverse().map((r) => { const v = r.values, x = sav(v);
           return `<tr><td>${esc(r.label)}</td>${shown.map(([k]) => `<td>${kwh(v[k])}</td>`).join('')}${price && has('load') ? `<td class="sv">${isNum(x) ? x.toFixed(2) : '–'}</td>` : ''}</tr>`; }).join('');
       // savings of the period shown, above the chart
