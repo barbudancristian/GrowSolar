@@ -44,6 +44,8 @@ The first window asks where GrowSolar reads the system from. Under the question 
 | **Solar Assistant** | No dongles: the inverter(s) are connected by USB cable to Solar Assistant, and Home Assistant gets the data from Solar Assistant over MQTT. | Every inverter and the system totals, the battery (BMS: cells, cycles, health), the daily energy counters, the Solar Assistant prediction and cloud cover. |
 | **Choose the sensors myself** | Another inverter brand (not Growatt: Deye, Victron, Huawei, SMA …) or any system whose sensors are already in Home Assistant (other integrations, template sensors). | Nothing; you pick the sensors in step 3. |
 
+With **DongleGrowatt**, the page can also show the Growatt logo (Dashboard, Charts, Totals) and an inverter picture above each inverter (Inverters). The images are not part of GrowSolar: copy `growatt-logo.png` and `growatt-inverter.png` to `<config>/www/growsolar/` (for example with the File editor or Samba add-on) and refresh the page. Without them, nothing is shown.
+
 The first two sources find the sensors by their **unique id**, so it does not matter how you renamed the entities. If a source shows 0 inverters, its sensors are missing or disabled, or they are not MQTT sensors.
 
 ## 4. Step 2: system

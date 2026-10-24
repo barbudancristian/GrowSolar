@@ -112,6 +112,12 @@ const SET_LABEL = {
   remote_switch: ['Remote switch', 'Pornire / oprire la distanță']
 };
 
+/* Growatt images for the DongleGrowatt source. They are not shipped with GrowSolar:
+   put them in <config>/www/growsolar/ (served as /local/growsolar/); missing files are simply hidden */
+const IMG_LOGO = '/local/growsolar/growatt-logo.png';
+const IMG_INV = '/local/growsolar/growatt-inverter.png';
+const img = (src, cls) => `<img class="${cls}" src="${src}" alt="" onerror="this.remove()">`;
+
 const COL = { pv: '#ffb02e', load: '#4aa3ff', bat: '#35d07f', grid: '#b284ff', bad: '#ff5d6c', fc: '#ffd166', cloud: '#8fa0c8', v: '#5ad1e6' };
 const WX_ICON = { sunny: 'mdi:weather-sunny', 'clear-night': 'mdi:weather-night', partlycloudy: 'mdi:weather-partly-cloudy', cloudy: 'mdi:weather-cloudy',
   rainy: 'mdi:weather-rainy', pouring: 'mdi:weather-pouring', fog: 'mdi:weather-fog', hail: 'mdi:weather-hail', lightning: 'mdi:weather-lightning',
@@ -252,20 +258,28 @@ td small{color:var(--mut);margin-left:6px;font-size:11px;background:rgba(255,209
 .kv{display:grid;grid-template-columns:auto 1fr;gap:10px 22px;font-size:15px}
 .kv span:nth-child(odd){color:var(--mut)}
 .kv span:nth-child(even){font-variant-numeric:tabular-nums}
-.tot{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);gap:16px;align-items:start}
+.totwrap{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);gap:16px;align-items:start}
 .tscroll{max-height:345px;overflow:auto;border-left:1px solid var(--line);padding-left:8px}
 .tscroll table th{position:sticky;top:0;background:#16295a;z-index:1;white-space:normal;line-height:1.25;vertical-align:bottom}
 .tscroll th,.tscroll td{padding:7px 7px;font-size:13px}
 .tscroll th small{display:block;margin:2px 0 0;background:none;padding:0;font-weight:400;color:var(--mut)}
 .tscroll td.sv{color:#8ff0bb}
 .arrow.dl{display:inline-flex;align-items:center;padding:4px 8px}
+header{position:relative}
+header .brand{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);pointer-events:none}
+@media (max-width:1250px){header .brand{position:static;transform:none;flex:1;display:flex;justify-content:center}}
+.blogo{height:24px;width:auto;display:block}
+.toolbar .tlogo{margin-left:auto}
+tr.ihead th{vertical-align:bottom}
+.invimg{display:block;height:92px;width:auto;margin:0 0 6px auto}
+@media (max-width:760px){header .brand,.toolbar .tlogo{display:none}.invimg{height:56px}}
 .zsel{fill:rgba(74,163,255,.18);stroke:#4aa3ff;stroke-width:1;pointer-events:none}
 .chart .hit{cursor:crosshair;touch-action:pan-y}
 .toolbar .hint{color:var(--mut);font-size:12px;opacity:.8}
 @media (max-width:700px){.toolbar .hint{display:none}}
 .sav{font-size:13px;letter-spacing:0;text-transform:none;color:var(--mut);background:rgba(53,208,127,.1);border:1px solid rgba(53,208,127,.25);border-radius:10px;padding:4px 10px;white-space:nowrap}
 .sav:empty{display:none}.sav b{color:#8ff0bb;font-size:15px;margin-left:4px}.sav small{margin-left:6px;font-size:11px}
-@media (max-width:900px){.tot{grid-template-columns:1fr}.tscroll{border-left:0;padding-left:0;max-height:none}}
+@media (max-width:900px){.totwrap{grid-template-columns:1fr}.tscroll{border-left:0;padding-left:0;max-height:none}}
 .note{color:var(--mut);font-size:13px;margin:10px 0 0;line-height:1.45}
 table.sets td.sv.click{cursor:pointer}table.sets td.sv.click:hover{background:rgba(74,111,208,.15)}
 table.sets tr.diff td.sv{color:#ffb02e}
@@ -345,6 +359,7 @@ class GrowSolarPanel extends HTMLElement {
   num(id) { if (!id || !this._hass) return NaN; const s = this._hass.states[id]; if (!s) return NaN; const v = parseFloat(s.state); return isFinite(v) ? v : NaN; }
   txt(id) { if (!id || !this._hass) return null; const s = this._hass.states[id]; return s && s.state !== 'unknown' && s.state !== 'unavailable' ? s.state : null; }
   get invs() { return this._map.inverters || []; }
+  get isDongle() { return this._map.source === 'donglegrowatt'; }
   invName(n) { return (this._map.names || [])[n] || `#${n + 1}`; }
   get sys() { return this._map.system || {}; }
   get en() { return this._map.energy || {}; }
@@ -391,6 +406,7 @@ class GrowSolarPanel extends HTMLElement {
       <header>
         <button class="menu" title="Menu"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg></button>
         <h1><i id="dot"></i><span id="ttl"></span></h1>
+        <span class="brand" id="brand"></span>
         <nav>${tabs.map((k) => `<button data-tab="${k}">${this.t(k)}</button>`).join('')}</nav>
         <span class="clock" id="clock"></span>
       </header>
@@ -404,6 +420,8 @@ class GrowSolarPanel extends HTMLElement {
 
   _show(tab) {
     this._tab = tab;
+    const br = this.$('#brand');
+    if (br) br.innerHTML = this.isDongle && (tab === 'dashboard' || tab === 'totals') ? img(IMG_LOGO, 'blogo') : '';
     this._charts = [];
     this.shadowRoot.querySelectorAll('nav button').forEach((b) => b.classList.toggle('on', b.dataset.tab === tab));
     const m = this.$('#main');
@@ -952,7 +970,7 @@ class GrowSolarPanel extends HTMLElement {
         <span id="r_custom" style="display:${this._range === 'custom' ? 'flex' : 'none'};gap:8px;align-items:center">
           ${this.t('from')} <input type="datetime-local" id="r_from"> ${this.t('to')} <input type="datetime-local" id="r_to"> <button class="arrow" id="r_apply">${this.t('apply')}</button></span>
         <button class="arrow" id="r_unzoom" style="display:${(this._zoomStack || []).length ? '' : 'none'}">↺ ${this.t('unzoom')}</button>
-        <span class="clock" id="r_label"></span><span class="hint">${this.t('zoomHint')}</span>
+        <span class="clock" id="r_label"></span><span class="hint">${this.t('zoomHint')}</span>${this.isDongle ? `<span class="tlogo">${img(IMG_LOGO, 'blogo')}</span>` : ''}
       </div><div class="charts" id="charts"></div>`;
     this.$('#r_unzoom').addEventListener('click', () => this._unzoom());
     m.querySelectorAll('.seg button').forEach((b) => b.addEventListener('click', () => {
@@ -1058,7 +1076,7 @@ class GrowSolarPanel extends HTMLElement {
   _totals(m) {
     const dl = (id) => `<button class="arrow dl" id="${id}" title="${esc(this.t('csv'))}"><svg viewBox="0 0 24 24" width="16" height="16"><path fill="currentColor" d="M12 3a1 1 0 0 1 1 1v9.6l3.3-3.3 1.4 1.4L12 17.4l-5.7-5.7 1.4-1.4 3.3 3.3V4a1 1 0 0 1 1-1zM5 19h14v2H5z"/></svg></button>`;
     const card = (p, nav, note) => `<section class="card"${p === 'day' ? '' : ' style="margin-top:14px"'}><h2><span id="${p}_ttl"></span><span class="sp"></span><span class="sav" id="${p}_sav"></span>${dl(p + '_csv')}${nav ? `<button class="arrow" id="${p}_prev">‹</button><button class="arrow" id="${p}_next">›</button>` : ''}</h2>
-        <div class="tot"><div id="${p}_c"></div><div class="tscroll"><table id="${p}_t"></table></div></div>${note ? `<div class="note">${this.t('kwhNote')}</div>` : ''}</section>`;
+        <div class="totwrap"><div id="${p}_c"></div><div class="tscroll"><table id="${p}_t"></table></div></div>${note ? `<div class="note">${this.t('kwhNote')}</div>` : ''}</section>`;
     m.innerHTML = card('day', true) + card('month', true) + card('year', false, true);
     for (const p of ['day', 'month', 'year']) this.$(`#${p}_csv`).addEventListener('click', () => this._csv(p));
     this.$('#day_prev').addEventListener('click', () => { this._dOff--; this._loadTotals('day'); });
@@ -1181,7 +1199,8 @@ class GrowSolarPanel extends HTMLElement {
   /* ================================================================= inverters */
   _inverters(m) {
     const n = this.invs.length, multi = n > 1, T = (k) => this.t(k);
-    const head = `<tr><th></th>${multi ? `<th>${T('total')}</th>` : ''}${this.invs.map((_, i) => `<th>${esc(this.invName(i))}</th>`).join('')}</tr>`;
+    const pic = this.isDongle ? img(IMG_INV, 'invimg') : '';
+    const head = `<tr class="ihead"><th></th>${multi ? `<th>${T('total')}</th>` : ''}${this.invs.map((_, i) => `<th>${pic}<div>${esc(this.invName(i))}</div></th>`).join('')}</tr>`;
     const rows = [
       ['deviceMode', 'mode'], ['temperature', 'temp'], ['busV', 'bus_v'], [null],
       ['loadPct', 'load_pct'], ['loadPower', 'load'], ['loadVA', 'load_va'], ['acOutV', 'out_v'], ['acOutHz', 'out_hz'], [null],

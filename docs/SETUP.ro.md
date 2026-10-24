@@ -44,6 +44,8 @@ Prima fereastră întreabă de unde citește GrowSolar sistemul. Sub întrebare 
 | **Solar Assistant** | Fără dongle-uri: invertorul sau invertoarele sunt legate cu cablu USB la Solar Assistant, iar Home Assistant ia datele de la Solar Assistant prin MQTT. | Fiecare invertor și totalurile sistemului, bateria (BMS: celule, cicluri, stare de sănătate), contoarele zilnice de energie, prognoza Solar Assistant și norii. |
 | **Aleg eu senzorii** | Alt tip de invertor (nu Growatt: Deye, Victron, Huawei, SMA …) sau orice sistem ai cărui senzori există deja în Home Assistant (alte integrări, senzori template). | Nimic; alegi senzorii la pasul 3. |
 
+Cu **DongleGrowatt**, pagina poate arăta și logo-ul Growatt (Dashboard, Grafice, Totaluri) și o poză a invertorului deasupra fiecărui invertor (Invertoare). Imaginile nu fac parte din GrowSolar: copiezi `growatt-logo.png` și `growatt-inverter.png` în `<config>/www/growsolar/` (de exemplu cu add-on-ul File editor sau Samba) și dai refresh. Fără ele nu apare nimic.
+
 Primele două surse găsesc senzorii după **ID-ul unic**, deci nu contează cum ai redenumit entitățile. Dacă o sursă arată 0 invertoare, senzorii ei lipsesc sau sunt dezactivați, ori nu sunt senzori MQTT.
 
 ## 4. Pasul 2: sistemul
