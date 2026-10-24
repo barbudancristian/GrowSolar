@@ -34,7 +34,7 @@ const STR = {
     noData: 'No data', noSetup: 'GrowSolar has no entities yet. Open Settings → Devices & services → GrowSolar → Configure.',
     kwhNote: 'Energy from the long-term statistics of the energy counters.', price: 'Price',
     perInv: 'Inverter', mppt: 'mppt', loading: 'Loading…',
-    csv: 'Download CSV', savMonth: 'Savings this month', savTotal: 'Total savings', since: 'since',
+    csv: 'Download CSV', savMonth: 'Savings this month', savYear: 'Savings this year', savTotal: 'Total savings', since: 'since', byYear: 'By year', year: 'Year',
     settings: 'Settings', firmware: 'Firmware', invClock: 'Inverter clock', mpptTemp: 'MPPT temperature', fan: 'Fan',
     setting: 'Setting', allInv: 'All inverters', applyAll: 'Apply to all', edit: 'Change', cancel: 'Cancel', save: 'Save',
     confirmTitle: 'Change inverter settings?', confirmOk: 'Yes, change', confirmNote: 'The inverters are changed one after the other; each value is checked before the next one is sent.',
@@ -69,7 +69,7 @@ const STR = {
     noData: 'Fără date', noSetup: 'GrowSolar nu are încă entități. Deschide Setări → Dispozitive și servicii → GrowSolar → Configurează.',
     kwhNote: 'Energia vine din statisticile pe termen lung ale contoarelor de energie.', price: 'Preț',
     perInv: 'Invertor', mppt: 'mppt', loading: 'Se încarcă…',
-    csv: 'Descarcă CSV', savMonth: 'Economii luna aceasta', savTotal: 'Economii totale', since: 'din',
+    csv: 'Descarcă CSV', savMonth: 'Economii luna aceasta', savYear: 'Economii anul acesta', savTotal: 'Economii totale', since: 'din', byYear: 'Pe ani', year: 'Anul',
     settings: 'Setări', firmware: 'Firmware', invClock: 'Ceas invertor', mpptTemp: 'Temperatură MPPT', fan: 'Ventilator',
     setting: 'Setare', allInv: 'Toate invertoarele', applyAll: 'Aplică pe toate', edit: 'Schimbă', cancel: 'Renunță', save: 'Salvează',
     confirmTitle: 'Schimbi setările invertoarelor?', confirmOk: 'Da, schimbă', confirmNote: 'Invertoarele se schimbă pe rând; fiecare valoare e verificată înainte să o trimit pe următoarea.',
@@ -984,90 +984,106 @@ class GrowSolarPanel extends HTMLElement {
   }
 
   /* ================================================================= totals */
+  /* Totals: one month by day, one year by month, all years */
   _totals(m) {
     const dl = (id) => `<button class="arrow dl" id="${id}" title="${esc(this.t('csv'))}"><svg viewBox="0 0 24 24" width="16" height="16"><path fill="currentColor" d="M12 3a1 1 0 0 1 1 1v9.6l3.3-3.3 1.4 1.4L12 17.4l-5.7-5.7 1.4-1.4 3.3 3.3V4a1 1 0 0 1 1-1zM5 19h14v2H5z"/></svg></button>`;
-    m.innerHTML = `<section class="card"><h2>${this.t('last30')}<span class="sp"></span><span class="sav" id="d_sav"></span>${dl('d_csv')}<button class="arrow" id="d_prev">‹</button><button class="arrow" id="d_next">›</button></h2>
-        <div class="tot"><div id="c_days"></div><div class="tscroll"><table id="t_days"></table></div></div></section>
-      <section class="card" style="margin-top:14px"><h2>${this.t('last12')}<span class="sp"></span><span class="sav" id="m_sav"></span>${dl('m_csv')}<button class="arrow" id="m_prev">‹</button><button class="arrow" id="m_next">›</button></h2>
-        <div class="tot"><div id="c_months"></div><div class="tscroll"><table id="t_months"></table></div></div><div class="note">${this.t('kwhNote')}</div></section>`;
-    this.$('#d_csv').addEventListener('click', () => this._csv('day'));
-    this.$('#m_csv').addEventListener('click', () => this._csv('month'));
-    this.$('#d_prev').addEventListener('click', () => { this._dOff--; this._loadTotals('day'); });
-    this.$('#d_next').addEventListener('click', () => { if (this._dOff < 0) { this._dOff++; this._loadTotals('day'); } });
-    this.$('#m_prev').addEventListener('click', () => { this._mOff--; this._loadTotals('month'); });
-    this.$('#m_next').addEventListener('click', () => { if (this._mOff < 0) { this._mOff++; this._loadTotals('month'); } });
-    this._loadTotals('day'); this._loadTotals('month');
+    const card = (p, nav, note) => `<section class="card"${p === 'day' ? '' : ' style="margin-top:14px"'}><h2><span id="${p}_ttl"></span><span class="sp"></span><span class="sav" id="${p}_sav"></span>${dl(p + '_csv')}${nav ? `<button class="arrow" id="${p}_prev">‹</button><button class="arrow" id="${p}_next">›</button>` : ''}</h2>
+        <div class="tot"><div id="${p}_c"></div><div class="tscroll"><table id="${p}_t"></table></div></div>${note ? `<div class="note">${this.t('kwhNote')}</div>` : ''}</section>`;
+    m.innerHTML = card('day', true) + card('month', true) + card('year', false, true);
+    for (const p of ['day', 'month', 'year']) this.$(`#${p}_csv`).addEventListener('click', () => this._csv(p));
+    this.$('#day_prev').addEventListener('click', () => { this._dOff--; this._loadTotals('day'); });
+    this.$('#day_next').addEventListener('click', () => { if (this._dOff < 0) { this._dOff++; this._loadTotals('day'); } });
+    this.$('#month_prev').addEventListener('click', () => { this._mOff--; this._loadTotals('month'); });
+    this.$('#month_next').addEventListener('click', () => { if (this._mOff < 0) { this._mOff++; this._loadTotals('month'); } });
+    this._loadTotals('day'); this._loadTotals('month'); this._loadTotals('year');
   }
-  async _loadTotals(period) {
-    const now = new Date();
-    let t0, t1;
-    if (period === 'day') { t1 = startOfDay(Date.now()) + DAY + this._dOff * 30 * DAY; t0 = t1 - 30 * DAY; }
-    else { const e = new Date(now.getFullYear(), now.getMonth() + 1 + this._mOff * 12, 1); t1 = e.getTime(); t0 = new Date(e.getFullYear(), e.getMonth() - 12, 1).getTime(); }
-    const keyset = [{ k: 'load', name: this.t('load'), color: COL.load }, { k: 'pv', name: this.t('solar'), color: COL.pv }, { k: 'grid_in', name: this.t('grid'), color: COL.grid }];
-    this._charts = (this._charts || []).filter((h) => h.isConnected);
-    try {
-      const st = await this.energyStats(t0, t1, period);
-      const rows = [];
-      if (period === 'day') for (let t = t0; t < t1 && t <= Date.now(); t += DAY) { const ts = startOfDay(t + 3600e3); rows.push({ t: ts, values: st[ts] || this._near(st, ts) || {} }); }
-      else for (let i = 0; i < 12; i++) { const d = new Date(new Date(t0).getFullYear(), new Date(t0).getMonth() + i, 1); if (d.getTime() > Date.now()) break; rows.push({ t: d.getTime(), values: st[d.getTime()] || this._near(st, d.getTime()) || {} }); }
-      const today = startOfDay(Date.now());
-      const keysAll = Object.keys(this.en).filter((k) => (this.en[k] || []).length);
-      const live = {};
-      for (const k of keysAll) { try { live[k] = await this.energyToday(k); } catch (e) { live[k] = NaN; } }
-      for (const r of rows) {
-        const isCur = period === 'day' ? r.t === today : r.t === new Date(new Date().getFullYear(), new Date().getMonth(), 1).getTime();
-        if (!isCur) continue;
-        for (const k of keysAll) {
-          if (!isNum(live[k])) continue;
-          // the statistics of the current hour are not compiled yet: take today from the counters
-          if (period === 'day') r.values[k] = live[k];
-          else {
-            const st2 = await this.energyStats(r.t, today, 'day').catch(() => ({}));
-            let before = 0; for (const row of Object.values(st2)) if (isNum(row[k])) before += row[k];
-            r.values[k] = before + live[k];
-          }
+  /* energy rows of a period; today and the current month take the live counters (their statistics are not compiled yet) */
+  async _energyRows(t0, t1, period) {
+    const st = await this.energyStats(t0, t1, period);
+    const now = Date.now(), today = startOfDay(now), m0 = new Date(new Date().getFullYear(), new Date().getMonth(), 1).getTime();
+    const rows = [];
+    if (period === 'day') for (let t = t0; t < t1 && t <= now; t += DAY) { const ts = startOfDay(t + 3600e3); rows.push({ t: ts, values: { ...(st[ts] || this._near(st, ts) || {}) } }); }
+    else for (let d = new Date(t0); d.getTime() < t1 && d.getTime() <= now; d = new Date(d.getFullYear(), d.getMonth() + 1, 1)) rows.push({ t: d.getTime(), values: { ...(st[d.getTime()] || this._near(st, d.getTime()) || {}) } });
+    const cur = rows.find((r) => r.t === (period === 'day' ? today : m0));
+    if (cur) {
+      const keys = Object.keys(this.en).filter((k) => (this.en[k] || []).length);
+      let before = null;
+      for (const k of keys) {
+        let live; try { live = await this.energyToday(k); } catch (e) { live = NaN; }
+        if (!isNum(live)) continue;
+        if (period === 'day') cur.values[k] = live;
+        else {
+          if (!before) before = await this.energyStats(m0, today, 'day').catch(() => ({}));
+          let b = 0; for (const row of Object.values(before)) if (isNum(row[k])) b += row[k];
+          cur.values[k] = b + live;
         }
       }
-      for (const r of rows) {
-        const d = new Date(r.t);
-        r.label = period === 'day' ? d.toLocaleDateString(this.lang, { weekday: 'short', day: 'numeric', month: 'short' }) : d.toLocaleDateString(this.lang, { month: 'long', year: 'numeric' });
-        r.short = period === 'day' ? String(d.getDate()) : d.toLocaleDateString(this.lang, { month: 'short' });
+    }
+    return rows;
+  }
+  async _loadTotals(period) {
+    const now = new Date(), L = this.lang;
+    this._charts = (this._charts || []).filter((h) => h.isConnected);
+    try {
+      let rows, title;
+      if (period === 'day') {
+        const s0 = new Date(now.getFullYear(), now.getMonth() + this._dOff, 1), e0 = new Date(s0.getFullYear(), s0.getMonth() + 1, 1);
+        rows = await this._energyRows(s0.getTime(), e0.getTime(), 'day');
+        const name = s0.toLocaleDateString(L, { month: 'long', year: 'numeric' });
+        title = name.charAt(0).toUpperCase() + name.slice(1);
+        for (const r of rows) { const d = new Date(r.t); r.label = d.toLocaleDateString(L, { weekday: 'short', day: 'numeric', month: 'short' }); r.short = String(d.getDate()); }
+      } else if (period === 'month') {
+        const y = now.getFullYear() + this._mOff;
+        rows = await this._energyRows(new Date(y, 0, 1).getTime(), new Date(y + 1, 0, 1).getTime(), 'month');
+        title = String(y);
+        for (const r of rows) { const d = new Date(r.t), n = d.toLocaleDateString(L, { month: 'long' }); r.label = n.charAt(0).toUpperCase() + n.slice(1); r.short = d.toLocaleDateString(L, { month: 'short' }); }
+      } else {
+        // all months with statistics, added up per calendar year
+        const months = await this._energyRows(new Date(2015, 0, 1).getTime(), new Date(now.getFullYear(), now.getMonth() + 1, 1).getTime(), 'month');
+        const by = {};
+        for (const r of months) {
+          if (!Object.values(r.values).some(isNum)) continue;
+          const y = new Date(r.t).getFullYear(), o = (by[y] = by[y] || { t: new Date(y, 0, 1).getTime(), values: {}, first: r.t });
+          for (const [k, v] of Object.entries(r.values)) if (isNum(v)) o.values[k] = (o.values[k] || 0) + v;
+        }
+        rows = Object.values(by).sort((a, b) => a.t - b.t);
+        for (const r of rows) { r.label = String(new Date(r.t).getFullYear()); r.short = r.label; }
+        title = this.t('byYear');
       }
+      const ttl = this.$(`#${period}_ttl`); if (ttl) ttl.textContent = title;
       this._totRows = this._totRows || {};
       this._totRows[period] = rows;
-      if (period === 'month') this._savings(rows);
-      this.bars(this.$(period === 'day' ? '#c_days' : '#c_months'), { id: period, rows, keys: keyset, area: true });
+      const keyset = [{ k: 'load', name: this.t('load'), color: COL.load }, { k: 'pv', name: this.t('solar'), color: COL.pv }, { k: 'grid_in', name: this.t('grid'), color: COL.grid }];
+      // a year chart has only a few points: bars read better there
+      this.bars(this.$(`#${period}_c`), { id: period, rows, keys: keyset, area: period !== 'year' });
       const price = this._cfg.price || 0, cur = this._cfg.currency || '';
       const cols = [['load', 'load'], ['pv', 'solar'], ['bat_in', 'batCharged'], ['bat_out', 'batDischarged'], ['grid_in', 'gridUsed'], ['grid_out', 'gridExported']];
       // a column is shown when there is a counter for it now or values from the history
       const has = (k) => (this.en[k] || []).length || rows.some((r) => isNum(r.values[k]));
       const shown = cols.filter(([k]) => has(k));
-      const tb = this.$(period === 'day' ? '#t_days' : '#t_months');
+      const sav = (v) => (isNum(v.load) ? (v.load - (v.grid_in || 0)) * price : NaN);
       // energy in kWh without the unit in every cell, so the savings column fits next to the chart
       const kwh = (v) => (isNum(v) ? (Math.abs(v) >= 100 ? v.toFixed(0) : v.toFixed(1)) : '–');
-      tb.innerHTML = `<tr><th>${this.t(period)}<small>kWh</small></th>${shown.map(([, l]) => `<th>${this.t(l)}</th>`).join('')}${price && has('load') ? `<th>${this.t('savings')}<small>${esc(cur)}</small></th>` : ''}</tr>` +
-        [...rows].reverse().map((r) => { const v = r.values, sav = isNum(v.load) ? (v.load - (v.grid_in || 0)) * price : NaN;
-          return `<tr><td>${esc(r.label)}</td>${shown.map(([k]) => `<td>${kwh(v[k])}</td>`).join('')}${price && has('load') ? `<td class="sv">${isNum(sav) ? sav.toFixed(2) : '–'}</td>` : ''}</tr>`; }).join('');
+      const head = { day: 'day', month: 'month', year: 'year' }[period];
+      this.$(`#${period}_t`).innerHTML = `<tr><th>${this.t(head)}<small>kWh</small></th>${shown.map(([, l]) => `<th>${this.t(l)}</th>`).join('')}${price && has('load') ? `<th>${this.t('savings')}<small>${esc(cur)}</small></th>` : ''}</tr>` +
+        [...rows].reverse().map((r) => { const v = r.values, x = sav(v);
+          return `<tr><td>${esc(r.label)}</td>${shown.map(([k]) => `<td>${kwh(v[k])}</td>`).join('')}${price && has('load') ? `<td class="sv">${isNum(x) ? x.toFixed(2) : '–'}</td>` : ''}</tr>`; }).join('');
+      // savings of the period shown, above the chart
+      const sb = this.$(`#${period}_sav`);
+      if (sb) {
+        const vals = rows.map((r) => sav(r.values)).filter(isNum), total = vals.reduce((a, b) => a + b, 0);
+        let lbl = this.t('savings');
+        if (period === 'day') lbl = this._dOff === 0 ? this.t('savMonth') : this.t('savings');
+        if (period === 'month') lbl = this._mOff === 0 ? this.t('savYear') : this.t('savings');
+        let extra = '';
+        if (period === 'year') {
+          lbl = this.t('savTotal');
+          const first = rows.length ? Math.min(...rows.map((r) => r.first)) : 0;
+          if (first) extra = `<small>${esc(this.t('since'))} ${esc(new Date(first).toLocaleDateString(L, { month: 'short', year: 'numeric' }))}</small>`;
+        }
+        sb.innerHTML = price && vals.length ? `${esc(lbl)} <b>${total.toFixed(2)} ${esc(cur)}</b>${extra}` : '';
+      }
     } catch (e) { console.error('GrowSolar totals', e); }
-  }
-  /* savings above the charts: this month (daily card) and since the first recorded month (monthly card) */
-  async _savings(rows) {
-    const price = this._cfg.price || 0, cur = this._cfg.currency || '';
-    const ds = this.$('#d_sav'), ms = this.$('#m_sav');
-    if (!price || !ds || !ms) return;
-    const sav = (v) => (isNum(v.load) ? (v.load - (v.grid_in || 0)) * price : NaN);
-    const m0 = new Date(new Date().getFullYear(), new Date().getMonth(), 1).getTime();
-    const curRow = rows.find((r) => r.t === m0);
-    const sm = curRow ? sav(curRow.values) : NaN;
-    ds.innerHTML = isNum(sm) ? `${esc(this.t('savMonth'))} <b>${sm.toFixed(2)} ${esc(cur)}</b>` : '';
-    try {
-      // every month with statistics; the current month comes from the row above (it includes today)
-      const st = await this.energyStats(new Date(2015, 0, 1).getTime(), m0, 'month');
-      let total = isNum(sm) ? sm : 0, first = curRow && isNum(sm) ? m0 : 0;
-      for (const [t, v] of Object.entries(st)) { const x = sav(v); if (isNum(x) && +t < m0) { total += x; if (!first || +t < first) first = +t; } }
-      const since = first ? new Date(first).toLocaleDateString(this.lang, { month: 'short', year: 'numeric' }) : '';
-      ms.innerHTML = first ? `${esc(this.t('savTotal'))} <b>${total.toFixed(2)} ${esc(cur)}</b><small>${esc(this.t('since'))} ${esc(since)}</small>` : '';
-    } catch (e) { ms.innerHTML = ''; }
   }
   /* CSV with the same columns as Solar Assistant's export (Wh), oldest row first */
   _csv(period) {
@@ -1079,14 +1095,14 @@ class GrowSolarPanel extends HTMLElement {
     const head = ['"Time"', ...cols.map(([, l]) => `"${l} (Wh)"`), ...(price ? [`"Savings (${cur})"`] : [])].join(',');
     const lines = rows.map((r) => {
       const d = new Date(r.t), v = r.values;
-      const time = period === 'day' ? `${d.getFullYear()}-${p2(d.getMonth() + 1)}-${p2(d.getDate())}` : `${d.getFullYear()}-${p2(d.getMonth() + 1)}`;
+      const time = period === 'day' ? `${d.getFullYear()}-${p2(d.getMonth() + 1)}-${p2(d.getDate())}` : period === 'month' ? `${d.getFullYear()}-${p2(d.getMonth() + 1)}` : String(d.getFullYear());
       const sav = isNum(v.load) ? ((v.load - (v.grid_in || 0)) * price).toFixed(2) : '';
       return [time, ...cols.map(([k]) => (isNum(v[k]) ? Math.round(v[k] * 1000) : '')), ...(price ? [sav] : [])].join(',');
     });
     const blob = new Blob([head + '\n' + lines.join('\n') + '\n'], { type: 'text/csv' });
     const a = document.createElement('a'), now = new Date();
     a.href = URL.createObjectURL(blob);
-    a.download = `GrowSolar_${period === 'day' ? 'daily' : 'monthly'}_totals_${now.getFullYear()}-${p2(now.getMonth() + 1)}-${p2(now.getDate())}.csv`;
+    a.download = `GrowSolar_${{ day: 'daily', month: 'monthly', year: 'yearly' }[period]}_totals_${now.getFullYear()}-${p2(now.getMonth() + 1)}-${p2(now.getDate())}.csv`;
     this.shadowRoot.appendChild(a); a.click(); a.remove();
     setTimeout(() => URL.revokeObjectURL(a.href), 5000);
   }
