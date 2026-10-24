@@ -40,9 +40,9 @@ Prima fereastră întreabă de unde citește GrowSolar sistemul. Sub întrebare 
 
 | Opțiune | Când o alegi | Ce găsește singur |
 | --- | --- | --- |
-| **DongleGrowatt (pachetele Growatt-SPF6K-HA)** | Folosești stick-ul Growatt ShineWiFi-X2 cu firmware-ul [Growatt-SPF6K-HA](https://github.com/barbudancristian/Growatt-SPF6K-HA) și pachetul lui pentru Home Assistant. | Fiecare invertor (`sensor.growatt_1_…`, `growatt_2_…`), cu PV1/PV2, baterie, ieșire, rețea, temperaturi, stare, setări și contoare de energie. |
-| **Solar Assistant (MQTT)** | Folosești Solar Assistant cu integrarea lui MQTT în Home Assistant. | Fiecare invertor și totalurile sistemului, bateria (BMS: celule, cicluri, stare de sănătate), contoarele zilnice de energie, prognoza Solar Assistant și norii. |
-| **Aleg eu senzorii** | Orice alt sistem: alte invertoare (Deye, Victron, Huawei, SMA …), alte integrări, senzori template. | Nimic; alegi senzorii la pasul 3. |
+| **DongleGrowatt** | Invertor(oare) Growatt cu stick-ul ShineWiFi-X2 scris cu firmware-ul [Growatt-SPF6K-HA](https://github.com/barbudancristian/Growatt-SPF6K-HA) (câte unul pe invertor) și pachetul lui pentru Home Assistant. GrowSolar poate și schimba setările invertoarelor. | Fiecare invertor (`sensor.growatt_1_…`, `growatt_2_…`), cu PV1/PV2, baterie, ieșire, rețea, temperaturi, stare, setări și contoare de energie. |
+| **Solar Assistant** | Fără dongle-uri: invertorul sau invertoarele sunt legate cu cablu USB la Solar Assistant, iar Home Assistant ia datele de la Solar Assistant prin MQTT. | Fiecare invertor și totalurile sistemului, bateria (BMS: celule, cicluri, stare de sănătate), contoarele zilnice de energie, prognoza Solar Assistant și norii. |
+| **Aleg eu senzorii** | Alt tip de invertor (nu Growatt: Deye, Victron, Huawei, SMA …) sau orice sistem ai cărui senzori există deja în Home Assistant (alte integrări, senzori template). | Nimic; alegi senzorii la pasul 3. |
 
 Primele două surse găsesc senzorii după **ID-ul unic**, deci nu contează cum ai redenumit entitățile. Dacă o sursă arată 0 invertoare, senzorii ei lipsesc sau sunt dezactivați, ori nu sunt senzori MQTT.
 

@@ -40,9 +40,9 @@ The first window asks where GrowSolar reads the system from. Under the question 
 
 | Option | When to choose it | What it finds by itself |
 | --- | --- | --- |
-| **DongleGrowatt (Growatt-SPF6K-HA packages)** | You use the Growatt ShineWiFi-X2 stick with the [Growatt-SPF6K-HA](https://github.com/barbudancristian/Growatt-SPF6K-HA) firmware and its Home Assistant package. | Every inverter (`sensor.growatt_1_…`, `growatt_2_…`), with PV1/PV2, battery, output, grid, temperatures, status, settings and energy counters. |
-| **Solar Assistant (MQTT)** | You use Solar Assistant with its MQTT integration in Home Assistant. | Every inverter and the system totals, the battery (BMS: cells, cycles, health), the daily energy counters, the Solar Assistant prediction and cloud cover. |
-| **Choose the sensors myself** | Any other system: other inverters (Deye, Victron, Huawei, SMA …), other integrations, template sensors. | Nothing; you pick the sensors in step 3. |
+| **DongleGrowatt** | Growatt inverter(s) with the ShineWiFi-X2 stick flashed with the [Growatt-SPF6K-HA](https://github.com/barbudancristian/Growatt-SPF6K-HA) firmware (one per inverter) and its Home Assistant package. GrowSolar can also change the inverter settings. | Every inverter (`sensor.growatt_1_…`, `growatt_2_…`), with PV1/PV2, battery, output, grid, temperatures, status, settings and energy counters. |
+| **Solar Assistant** | No dongles: the inverter(s) are connected by USB cable to Solar Assistant, and Home Assistant gets the data from Solar Assistant over MQTT. | Every inverter and the system totals, the battery (BMS: cells, cycles, health), the daily energy counters, the Solar Assistant prediction and cloud cover. |
+| **Choose the sensors myself** | Another inverter brand (not Growatt: Deye, Victron, Huawei, SMA …) or any system whose sensors are already in Home Assistant (other integrations, template sensors). | Nothing; you pick the sensors in step 3. |
 
 The first two sources find the sensors by their **unique id**, so it does not matter how you renamed the entities. If a source shows 0 inverters, its sensors are missing or disabled, or they are not MQTT sensors.
 

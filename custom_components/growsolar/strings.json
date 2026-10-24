@@ -6,7 +6,7 @@
     "step": {
       "user": {
         "title": "Data source",
-        "description": "Where should GrowSolar read the solar system from?\n\nFound now: DongleGrowatt inverters: {dongle}, Solar Assistant inverters: {sa}.",
+        "description": "Where should GrowSolar read the solar system from?\n\n- **DongleGrowatt** – Growatt inverter(s) with the ShineWiFi-X2 dongle flashed with the [Growatt-SPF6K-HA](https://github.com/barbudancristian/Growatt-SPF6K-HA) firmware, one dongle per inverter, with its Home Assistant package installed. GrowSolar can also change the inverter settings this way.\n- **Solar Assistant** – no dongles: the inverter(s) are connected by USB cable to Solar Assistant, and Home Assistant gets the data from Solar Assistant over MQTT.\n- **Choose the sensors myself** – another inverter brand (not Growatt), or any system whose sensors are already in Home Assistant: you pick the power, battery and energy sensors in the next step.\n\nFound now: DongleGrowatt inverters: {dongle}, Solar Assistant inverters: {sa}.",
         "data": {
           "source": "Source"
         }
@@ -90,9 +90,9 @@
   "selector": {
     "source": {
       "options": {
-        "donglegrowatt": "DongleGrowatt (Growatt-SPF6K-HA packages)",
-        "solar_assistant": "Solar Assistant (MQTT)",
-        "manual": "Choose the sensors myself"
+        "donglegrowatt": "DongleGrowatt – Growatt with the Growatt-SPF6K-HA dongle firmware",
+        "solar_assistant": "Solar Assistant – inverters on USB to Solar Assistant, data over MQTT",
+        "manual": "Choose the sensors myself – another inverter, existing Home Assistant sensors"
       }
     }
   }
