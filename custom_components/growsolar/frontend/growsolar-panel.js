@@ -7,7 +7,7 @@
  * SPDX-License-Identifier: MIT
  */
 (() => {
-const VERSION = '0.2.4';
+const VERSION = '0.2.5';
 
 /* ------------------------------------------------------------------ texts */
 const STR = {
@@ -34,6 +34,7 @@ const STR = {
     noData: 'No data', noSetup: 'GrowSolar has no entities yet. Open Settings → Devices & services → GrowSolar → Configure.',
     kwhNote: 'Energy from the long-term statistics of the energy counters.', price: 'Price',
     perInv: 'Inverter', mppt: 'mppt', loading: 'Loading…',
+    csv: 'Download CSV',
     settings: 'Settings', firmware: 'Firmware', invClock: 'Inverter clock', mpptTemp: 'MPPT temperature', fan: 'Fan',
     setting: 'Setting', allInv: 'All inverters', applyAll: 'Apply to all', edit: 'Change', cancel: 'Cancel', save: 'Save',
     confirmTitle: 'Change inverter settings?', confirmOk: 'Yes, change', confirmNote: 'The inverters are changed one after the other; each value is checked before the next one is sent.',
@@ -68,6 +69,7 @@ const STR = {
     noData: 'Fără date', noSetup: 'GrowSolar nu are încă entități. Deschide Setări → Dispozitive și servicii → GrowSolar → Configurează.',
     kwhNote: 'Energia vine din statisticile pe termen lung ale contoarelor de energie.', price: 'Preț',
     perInv: 'Invertor', mppt: 'mppt', loading: 'Se încarcă…',
+    csv: 'Descarcă CSV',
     settings: 'Setări', firmware: 'Firmware', invClock: 'Ceas invertor', mpptTemp: 'Temperatură MPPT', fan: 'Ventilator',
     setting: 'Setare', allInv: 'Toate invertoarele', applyAll: 'Aplică pe toate', edit: 'Schimbă', cancel: 'Renunță', save: 'Salvează',
     confirmTitle: 'Schimbi setările invertoarelor?', confirmOk: 'Da, schimbă', confirmNote: 'Invertoarele se schimbă pe rând; fiecare valoare e verificată înainte să o trimit pe următoarea.',
@@ -250,6 +252,11 @@ td small{color:var(--mut);margin-left:6px;font-size:11px;background:rgba(255,209
 .kv{display:grid;grid-template-columns:auto 1fr;gap:10px 22px;font-size:15px}
 .kv span:nth-child(odd){color:var(--mut)}
 .kv span:nth-child(even){font-variant-numeric:tabular-nums}
+.tot{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);gap:16px;align-items:start}
+.tscroll{max-height:345px;overflow:auto;border-left:1px solid var(--line);padding-left:8px}
+.tscroll table th{position:sticky;top:0;background:#16295a;z-index:1}
+.arrow.dl{display:inline-flex;align-items:center;padding:4px 8px}
+@media (max-width:900px){.tot{grid-template-columns:1fr}.tscroll{border-left:0;padding-left:0;max-height:none}}
 .note{color:var(--mut);font-size:13px;margin:10px 0 0;line-height:1.45}
 table.sets td.sv.click{cursor:pointer}table.sets td.sv.click:hover{background:rgba(74,111,208,.15)}
 table.sets tr.diff td.sv{color:#ffb02e}
@@ -639,7 +646,7 @@ class GrowSolarPanel extends HTMLElement {
     host._cfg = null; this._drawBars(host);
   }
   _drawBars(host) {
-    const cfg = host._bars, W = Math.max(280, host.clientWidth || 600), H = W < 500 ? 200 : 250, m = { l: 46, r: 10, t: 10, b: 26 };
+    const cfg = host._bars, W = Math.max(280, host.clientWidth || 600), H = cfg.area ? (W < 500 ? 220 : 300) : (W < 500 ? 200 : 250), m = { l: 46, r: 10, t: 10, b: 26 };
     const keys = cfg.keys.filter((k) => !this._hidden[cfg.id + k.name]);
     let hi = 0; for (const r of cfg.rows) for (const k of keys) if (isNum(r.values[k.k])) hi = Math.max(hi, r.values[k.k]);
     const st = niceStep(hi || 1, 4); hi = Math.ceil((hi || 1) / st) * st;
@@ -647,10 +654,25 @@ class GrowSolarPanel extends HTMLElement {
     let o = `<svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}">`;
     for (let v = 0; v <= hi + st / 2; v += st) o += `<line x1="${m.l}" x2="${W - m.r}" y1="${Y(v)}" y2="${Y(v)}" stroke="#fff" stroke-opacity="${v === 0 ? .25 : .07}"/><text x="${m.l - 6}" y="${Y(v) + 4}" text-anchor="end" fill="#8fa0c8" font-size="11">${shortNum(v)}</text>`;
     const every = Math.ceil(cfg.rows.length / (W < 500 ? 6 : 15));
+    const XC = (i) => m.l + i * gw + gw / 2;
+    if (cfg.area) {
+      // filled areas fading towards the bottom, one line per key (drawn back to front)
+      o += '<defs>' + keys.map((k, j) => `<linearGradient id="g_${cfg.id}_${j}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${k.color}" stop-opacity=".42"/><stop offset="1" stop-color="${k.color}" stop-opacity=".02"/></linearGradient>`).join('') + '</defs>';
+      [...keys].reverse().forEach((k) => {
+        const j = keys.indexOf(k);
+        const pts = cfg.rows.map((r, i) => [i, r.values[k.k]]).filter(([, v]) => isNum(v));
+        if (!pts.length) return;
+        const line = pts.map(([i, v], n) => (n ? 'L' : 'M') + XC(i).toFixed(1) + ' ' + Y(Math.max(0, v)).toFixed(1)).join('');
+        const a = pts[0][0], b = pts[pts.length - 1][0];
+        o += `<path d="${line}L${XC(b).toFixed(1)} ${Y(0)}L${XC(a).toFixed(1)} ${Y(0)}Z" fill="url(#g_${cfg.id}_${j})"/>`;
+        o += `<path d="${line}" fill="none" stroke="${k.color}" stroke-width="1.8" stroke-linejoin="round"/>`;
+      });
+      o += `<line class="cur" y1="${m.t}" y2="${H - m.b}" stroke="#fff" stroke-opacity=".4" style="display:none"/><g class="dots"></g>`;
+    }
     cfg.rows.forEach((r, i) => {
       const x0 = m.l + i * gw + gw * 0.1;
-      keys.forEach((k, j) => { const v = r.values[k.k]; if (isNum(v) && v > 0) o += `<rect x="${x0 + j * bw}" y="${Y(v)}" width="${Math.max(1, bw - 1)}" height="${Y(0) - Y(v)}" rx="1.5" fill="${k.color}"/>`; });
-      if (i % every === 0) o += `<text x="${m.l + i * gw + gw / 2}" y="${H - 8}" text-anchor="middle" fill="#8fa0c8" font-size="11">${esc(r.short)}</text>`;
+      if (!cfg.area) keys.forEach((k, j) => { const v = r.values[k.k]; if (isNum(v) && v > 0) o += `<rect x="${x0 + j * bw}" y="${Y(v)}" width="${Math.max(1, bw - 1)}" height="${Y(0) - Y(v)}" rx="1.5" fill="${k.color}"/>`; });
+      if (i % every === 0) o += `<text x="${XC(i)}" y="${H - 8}" text-anchor="middle" fill="#8fa0c8" font-size="11">${esc(r.short)}</text>`;
     });
     o += `<rect class="hit" x="${m.l}" y="${m.t}" width="${W - m.l - m.r}" height="${H - m.t - m.b}" fill="transparent"/></svg><div class="tip"></div>`;
     host.innerHTML = o;
@@ -664,10 +686,18 @@ class GrowSolarPanel extends HTMLElement {
       if (!row) { tip.style.display = 'none'; return; }
       tip.innerHTML = `<div style="color:#97a6c8;margin-bottom:3px">${esc(row.label)}</div>` + keys.map((k) => `<div><i style="background:${k.color}"></i>${esc(k.name)}<b>${fmtKwh(row.values[k.k])}</b></div>`).join('');
       tip.style.display = 'block';
+      if (cfg.area) {
+        const cur = host.querySelector('.cur'), dots = host.querySelector('.dots'), x = m.l + i * gw + gw / 2;
+        cur.setAttribute('x1', x); cur.setAttribute('x2', x); cur.style.display = '';
+        dots.innerHTML = keys.filter((k) => isNum(row.values[k.k])).map((k) => `<circle cx="${x}" cy="${Y(Math.max(0, row.values[k.k]))}" r="3.5" fill="${k.color}" stroke="#0d1a3a" stroke-width="1.5"/>`).join('');
+      }
       const px = (m.l + i * gw + gw / 2) / W * r.width, tw = tip.offsetWidth;
       tip.style.left = Math.min(r.width - tw, Math.max(0, px + (px > r.width / 2 ? -tw - 12 : 12))) + 'px'; tip.style.top = '8px';
     });
-    host.querySelector('.hit').addEventListener('pointerleave', () => { tip.style.display = 'none'; });
+    host.querySelector('.hit').addEventListener('pointerleave', () => {
+      tip.style.display = 'none';
+      if (cfg.area) { host.querySelector('.cur').style.display = 'none'; host.querySelector('.dots').innerHTML = ''; }
+    });
   }
   _redrawAll() { for (const h of this._charts || []) if (h.isConnected) (h._bars ? this._drawBars(h) : this._draw(h)); }
 
@@ -950,10 +980,13 @@ class GrowSolarPanel extends HTMLElement {
 
   /* ================================================================= totals */
   _totals(m) {
-    m.innerHTML = `<section class="card"><h2>${this.t('last30')}<span class="sp"></span><button class="arrow" id="d_prev">‹</button><button class="arrow" id="d_next">›</button></h2>
-        <div id="c_days"></div><div class="scroll"><table id="t_days"></table></div></section>
-      <section class="card" style="margin-top:14px"><h2>${this.t('last12')}<span class="sp"></span><button class="arrow" id="m_prev">‹</button><button class="arrow" id="m_next">›</button></h2>
-        <div id="c_months"></div><div class="scroll"><table id="t_months"></table></div><div class="note">${this.t('kwhNote')}</div></section>`;
+    const dl = (id) => `<button class="arrow dl" id="${id}" title="${esc(this.t('csv'))}"><svg viewBox="0 0 24 24" width="16" height="16"><path fill="currentColor" d="M12 3a1 1 0 0 1 1 1v9.6l3.3-3.3 1.4 1.4L12 17.4l-5.7-5.7 1.4-1.4 3.3 3.3V4a1 1 0 0 1 1-1zM5 19h14v2H5z"/></svg></button>`;
+    m.innerHTML = `<section class="card"><h2>${this.t('last30')}<span class="sp"></span>${dl('d_csv')}<button class="arrow" id="d_prev">‹</button><button class="arrow" id="d_next">›</button></h2>
+        <div class="tot"><div id="c_days"></div><div class="tscroll"><table id="t_days"></table></div></div></section>
+      <section class="card" style="margin-top:14px"><h2>${this.t('last12')}<span class="sp"></span>${dl('m_csv')}<button class="arrow" id="m_prev">‹</button><button class="arrow" id="m_next">›</button></h2>
+        <div class="tot"><div id="c_months"></div><div class="tscroll"><table id="t_months"></table></div></div><div class="note">${this.t('kwhNote')}</div></section>`;
+    this.$('#d_csv').addEventListener('click', () => this._csv('day'));
+    this.$('#m_csv').addEventListener('click', () => this._csv('month'));
     this.$('#d_prev').addEventListener('click', () => { this._dOff--; this._loadTotals('day'); });
     this.$('#d_next').addEventListener('click', () => { if (this._dOff < 0) { this._dOff++; this._loadTotals('day'); } });
     this.$('#m_prev').addEventListener('click', () => { this._mOff--; this._loadTotals('month'); });
@@ -995,16 +1028,40 @@ class GrowSolarPanel extends HTMLElement {
         r.label = period === 'day' ? d.toLocaleDateString(this.lang, { weekday: 'short', day: 'numeric', month: 'short' }) : d.toLocaleDateString(this.lang, { month: 'long', year: 'numeric' });
         r.short = period === 'day' ? String(d.getDate()) : d.toLocaleDateString(this.lang, { month: 'short' });
       }
-      this.bars(this.$(period === 'day' ? '#c_days' : '#c_months'), { id: period, rows, keys: keyset });
+      this._totRows = this._totRows || {};
+      this._totRows[period] = rows;
+      this.bars(this.$(period === 'day' ? '#c_days' : '#c_months'), { id: period, rows, keys: keyset, area: true });
       const price = this._cfg.price || 0, cur = this._cfg.currency || '';
       const cols = [['load', 'load'], ['pv', 'solar'], ['bat_in', 'batCharged'], ['bat_out', 'batDischarged'], ['grid_in', 'gridUsed'], ['grid_out', 'gridExported']];
-      const has = (k) => (this.en[k] || []).length;
+      // a column is shown when there is a counter for it now or values from the history
+      const has = (k) => (this.en[k] || []).length || rows.some((r) => isNum(r.values[k]));
       const shown = cols.filter(([k]) => has(k));
       const tb = this.$(period === 'day' ? '#t_days' : '#t_months');
       tb.innerHTML = `<tr><th>${this.t(period)}</th>${shown.map(([, l]) => `<th>${this.t(l)}</th>`).join('')}${price && has('load') ? `<th>${this.t('savings')}</th>` : ''}</tr>` +
         [...rows].reverse().map((r) => { const v = r.values, sav = isNum(v.load) ? (v.load - (v.grid_in || 0)) * price : NaN;
           return `<tr><td>${esc(r.label)}</td>${shown.map(([k]) => `<td>${fmtKwh(v[k])}</td>`).join('')}${price && has('load') ? `<td>${isNum(sav) ? sav.toFixed(2) + ' ' + esc(cur) : '–'}</td>` : ''}</tr>`; }).join('');
     } catch (e) { console.error('GrowSolar totals', e); }
+  }
+  /* CSV with the same columns as Solar Assistant's export (Wh), oldest row first */
+  _csv(period) {
+    const rows = (this._totRows || {})[period] || [];
+    if (!rows.length) return;
+    const cols = [['load', 'Load'], ['pv', 'Solar PV'], ['bat_in', 'Battery charged'], ['bat_out', 'Battery discharged'], ['grid_in', 'Grid used'], ['grid_out', 'Grid exported']];
+    const price = this._cfg.price || 0, cur = this._cfg.currency || '';
+    const p2 = (n) => String(n).padStart(2, '0');
+    const head = ['"Time"', ...cols.map(([, l]) => `"${l} (Wh)"`), ...(price ? [`"Savings (${cur})"`] : [])].join(',');
+    const lines = rows.map((r) => {
+      const d = new Date(r.t), v = r.values;
+      const time = period === 'day' ? `${d.getFullYear()}-${p2(d.getMonth() + 1)}-${p2(d.getDate())}` : `${d.getFullYear()}-${p2(d.getMonth() + 1)}`;
+      const sav = isNum(v.load) ? ((v.load - (v.grid_in || 0)) * price).toFixed(2) : '';
+      return [time, ...cols.map(([k]) => (isNum(v[k]) ? Math.round(v[k] * 1000) : '')), ...(price ? [sav] : [])].join(',');
+    });
+    const blob = new Blob([head + '\n' + lines.join('\n') + '\n'], { type: 'text/csv' });
+    const a = document.createElement('a'), now = new Date();
+    a.href = URL.createObjectURL(blob);
+    a.download = `GrowSolar_${period === 'day' ? 'daily' : 'monthly'}_totals_${now.getFullYear()}-${p2(now.getMonth() + 1)}-${p2(now.getDate())}.csv`;
+    this.shadowRoot.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 5000);
   }
   _near(st, t) { for (const k of Object.keys(st)) if (Math.abs(+k - t) < 2 * 3600e3) return st[k]; return null; }
 
