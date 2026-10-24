@@ -7,7 +7,7 @@
  * SPDX-License-Identifier: MIT
  */
 (() => {
-const VERSION = '0.2.3';
+const VERSION = '0.2.4';
 
 /* ------------------------------------------------------------------ texts */
 const STR = {
@@ -434,7 +434,12 @@ class GrowSolarPanel extends HTMLElement {
   }
   /* daily or monthly change of the energy counters (kWh): {start_ms: {pv, load, ...}} */
   /* moment of the switch from Solar Assistant to the dongles (ms), or 0 */
-  get histUntil() { const h = this._map.history_until; return h ? Date.parse(h) : 0; }
+  get histUntil() {
+    const h = this._map.history_until;
+    // Safari cannot parse microseconds ("...:53.809769+00:00"): keep milliseconds
+    const t = h ? Date.parse(String(h).replace(/(\.\d{3})\d+/, '$1')) : 0;
+    return isNum(t) ? t : 0;
+  }
   async energyStats(t0, t1, period) {
     const en = this.en, keys = Object.keys(en).filter((k) => en[k] && en[k].length);
     // before the switch the energy comes from Solar Assistant's counters

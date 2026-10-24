@@ -153,7 +153,7 @@ class GrowSolarConfigFlow(ConfigFlow, domain=DOMAIN):
     def _finish(self) -> ConfigFlowResult:
         if self._data.get(CONF_SOURCE) == SOURCE_DONGLE:
             # Solar Assistant's energy statistics, if any, keep the history before this moment
-            self._data[CONF_HISTORY_UNTIL] = dt_util.utcnow().isoformat()
+            self._data[CONF_HISTORY_UNTIL] = dt_util.utcnow().replace(microsecond=0).isoformat()
         return self.async_create_entry(title=self._data.get(CONF_TITLE) or "GrowSolar", data=self._data)
 
     @staticmethod
