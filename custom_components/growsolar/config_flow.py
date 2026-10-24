@@ -8,12 +8,14 @@ import voluptuous as vol
 from homeassistant.config_entries import ConfigEntry, ConfigFlow, ConfigFlowResult, OptionsFlow
 from homeassistant.core import callback
 from homeassistant.helpers import selector
+from homeassistant.util import dt as dt_util
 
 from . import mqtt_unique_ids
 from .const import (
     CONF_BATTERY_KWH,
     CONF_CURRENCY,
     CONF_INVERTERS,
+    CONF_HISTORY_UNTIL,
     CONF_MANUAL,
     CONF_NAMES,
     CONF_ORDER,
@@ -149,6 +151,9 @@ class GrowSolarConfigFlow(ConfigFlow, domain=DOMAIN):
         return self.async_show_form(step_id="manual", data_schema=_manual_schema({}))
 
     def _finish(self) -> ConfigFlowResult:
+        if self._data.get(CONF_SOURCE) == SOURCE_DONGLE:
+            # Solar Assistant's energy statistics, if any, keep the history before this moment
+            self._data[CONF_HISTORY_UNTIL] = dt_util.utcnow().isoformat()
         return self.async_create_entry(title=self._data.get(CONF_TITLE) or "GrowSolar", data=self._data)
 
     @staticmethod

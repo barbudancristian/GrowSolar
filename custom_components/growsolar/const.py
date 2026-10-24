@@ -1,7 +1,7 @@
 """Constants for GrowSolar."""
 
 DOMAIN = "growsolar"
-VERSION = "0.2.2"
+VERSION = "0.2.3"
 
 PANEL_URL = "growsolar"
 STATIC_URL = "/growsolar_static"
@@ -17,6 +17,7 @@ CONF_TITLE = "title"
 CONF_MANUAL = "manual"
 CONF_ORDER = "inverter_order"
 CONF_NAMES = "inverter_names"
+CONF_HISTORY_UNTIL = "history_until"
 
 SOURCE_DONGLE = "donglegrowatt"
 SOURCE_SA = "solar_assistant"

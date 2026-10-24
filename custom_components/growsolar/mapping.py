@@ -262,6 +262,15 @@ def build_map(source: str, uids: dict[str, str], inverters: int, manual: dict | 
         for key, uid_list in SA_ENERGY.items():
             energy[key] = [uids[u] for u in uid_list if u in uids]
 
+    # after moving from Solar Assistant to the dongles: its energy counters keep the history
+    # (the panel uses them for the time before the switch, see history_until)
+    energy_history: dict = {}
+    if source == SOURCE_DONGLE:
+        for key, uid_list in SA_ENERGY.items():
+            found = [uids[u] for u in uid_list if u in uids]
+            if found:
+                energy_history[key] = found
+
     options: dict = {}
     for key, ent in (manual or {}).items():
         if isinstance(ent, bool):
@@ -282,6 +291,7 @@ def build_map(source: str, uids: dict[str, str], inverters: int, manual: dict | 
         # energy sensors that reset every day; the panel reads them the same way
         # (daily change from the long-term statistics) in both cases
         "energy_daily_reset": source == SOURCE_SA,
+        "energy_history": energy_history,
         # invert_bat / invert_grid: the chosen sensors use the opposite sign
         "options": options,
         "settings": build_settings(source, ctrl or {}, inverters),
