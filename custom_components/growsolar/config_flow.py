@@ -119,7 +119,7 @@ class GrowSolarConfigFlow(ConfigFlow, domain=DOMAIN):
             data_schema=vol.Schema(
                 {
                     vol.Required(CONF_SOURCE, default=default): selector.SelectSelector(
-                        selector.SelectSelectorConfig(options=SOURCES, translation_key="source")
+                        selector.SelectSelectorConfig(options=SOURCES, translation_key="source", mode=selector.SelectSelectorMode.LIST)
                     )
                 }
             ),
