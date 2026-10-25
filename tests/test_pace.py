@@ -69,6 +69,7 @@ def test_real_v20_alarm():
     assert (ver, adr, rtn) == (0x20, 2, 0)
     al = p.parse_alarm(info, 4, ver)
     assert al.charge_mos and al.discharge_mos and al.protections == [] and al.faults == [] and al.warnings == []
+    assert al.charging and not al.discharging and not al.fully_charged and al.raw == "00 06 80 00 00"
     al = p.parse_alarm(info[:-16] + "000000" + "02" + "02" + "00" + "00" + "40", 4, 0x20)
     assert al.charge_mos and not al.discharge_mos and al.protections == ["cell undervoltage"] and al.faults == ["cell 15 fault"]
 

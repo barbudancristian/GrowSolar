@@ -174,6 +174,11 @@ class Alarm:
     faults: list[str] = field(default_factory=list)
     warnings: list[str] = field(default_factory=list)
     fully_charged: bool = False
+    charging: bool | None = None          # protocol 0x20 status 3
+    discharging: bool | None = None
+    heater: bool | None = None
+    buzzer: bool | None = None
+    raw: str = ""                         # the status bytes as sent, for comparing with other readers
 
 
 def _bits(v: int, names: dict[int, str]) -> list[str]:
@@ -211,6 +216,8 @@ def parse_alarm_v20(info: str, offset: int = 4) -> Alarm:
         balancing=[], protections=_bits(s1, PY_S1),
         faults=[f"cell {k + 1} fault" for k in range(8) if s4 >> k & 1] + [f"cell {k + 9} fault" for k in range(8) if s5 >> k & 1],
         warnings=warns, fully_charged=bool(s3 >> 3 & 1),
+        charging=bool(s3 >> 7 & 1), discharging=bool(s3 >> 6 & 1), heater=bool(s3 >> 5 & 1), buzzer=bool(s3 & 1),
+        raw=" ".join(f"{x:02X}" for x in (s1, s2, s3, s4, s5)),
     )
 
 
@@ -246,5 +253,6 @@ def parse_alarm(info: str, offset: int = 4, ver: int = 0x25) -> Alarm:
             faults=_bits(flt, FAULT),
             warnings=_bits(w1, WARN_1) + _bits(w2, WARN_2),
             fully_charged=bool(p2 >> 7 & 1),
+            raw=" ".join(f"{x:02X}" for x in (p1, p2, ins, _ctl, flt, b1, b2, w1, w2)),
         )
     raise FrameError(f"unknown alarm data layout ({last})")

@@ -67,6 +67,15 @@ def _state(a: Analog, al: Alarm | None) -> str:
 TEMP_LABELS = {"cells_1": "temperature cells 1", "cells_2": "temperature cells 2", "cells_3": "temperature cells 3",
                "cells_4": "temperature cells 4", "mosfet": "temperature MOSFET", "ambient": "temperature ambient"}
 
+def _operation(a: Analog, al: Alarm | None) -> str | None:
+    """What the BMS says it is doing (status bits when sent, else from the current)."""
+    if al is not None and al.charging is not None:
+        if al.fully_charged:
+            return "full"
+        return "charging" if al.charging else "discharging" if al.discharging else "idle"
+    return "charging" if a.current > 0.5 else "discharging" if a.current < -0.5 else "idle"
+
+
 SPECS = [
     Spec("voltage", "voltage", lambda a, _: round(a.voltage, 2), V, SensorDeviceClass.VOLTAGE, 2),
     Spec("current", "current", lambda a, _: round(a.current, 2), A, SensorDeviceClass.CURRENT, 2),
@@ -84,6 +93,8 @@ SPECS = [
     Spec("cell_max_no", "cell highest number", lambda a, _: a.cells.index(max(a.cells)) + 1, None, None, 0, False),
     Spec("cell_min_no", "cell lowest number", lambda a, _: a.cells.index(min(a.cells)) + 1, None, None, 0, False),
     Spec("state", "state", _state, None, None, None, False),
+    Spec("operation", "operation", _operation, None, None, None, False),
+    Spec("status_raw", "status bytes", lambda _, al: al.raw if al else None, None, None, None, False, EntityCategory.DIAGNOSTIC),
 ]
 
 
@@ -156,6 +167,7 @@ class BmsSensor(CoordinatorEntity[PaceBmsCoordinator], SensorEntity):
             attrs.update(
                 charge_mos=al.charge_mos, discharge_mos=al.discharge_mos, current_limit=al.current_limit,
                 balancing=al.balancing, protections=al.protections, faults=al.faults, warnings=al.warnings,
-                fully_charged=al.fully_charged,
+                fully_charged=al.fully_charged, charging=al.charging, discharging=al.discharging,
+                heater=al.heater, buzzer=al.buzzer,
             )
         return attrs
