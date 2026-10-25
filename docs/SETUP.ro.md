@@ -127,6 +127,16 @@ Entitatea de vreme folosită pentru norii de după ora curentă și pentru iconi
 
 Numele diferă între integrări și versiuni; contează sensul și unitatea.
 
+### Celulele bateriei (BMS PACE, opțional)
+
+Dacă bateria are BMS PACE, GrowSolar îl poate citi direct printr-un convertor RS485–Ethernet (de ex. Waveshare RS485 to POE ETH) și arată în pagina **Baterie** fiecare celulă, temperaturile, MOSFET-urile, echilibrarea și alarmele.
+
+1. Legi convertorul la mufa **RS485** liberă a bateriei (la bateriile legate la invertor prin CAN, cea de lângă CAN): pinii 1/8 = B, 2/7 = A. Dacă nu răspunde, inversezi A și B sau încerci una din mufele RS485 de paralel.
+2. Convertorul: 9600 baud, 8N1, **TCP Server**, protocol **None** (transparent), IP static.
+3. În GrowSolar → **Configure**: adresa convertorului și portul (implicit 4196).
+
+Senzorii apar ca `sensor.growsolar_bms_*` (celule, temperaturi, tensiune, curent, capacitate, SOC/SOH, cicluri, stare). La prima pornire GrowSolar caută singur versiunea protocolului și adresa BMS-ului.
+
 ## 6. Prognoza solară și vremea
 
 - **Curba de prognoză, *Rămas*, *Mâine*.** GrowSolar folosește prognoza solară pe care Home Assistant o are deja în **Settings → Dashboards → Energy → Solar panels → Solar production forecast**: **Solcast** (pe intervale de 30 de minute) sau **Forecast.Solar** (pe ore). Instalezi integrarea preferată și o adaugi acolo. Fără prognoză, când sursa e Solar Assistant se folosește prognoza lui.

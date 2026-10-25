@@ -7,7 +7,7 @@
  * SPDX-License-Identifier: MIT
  */
 (() => {
-const VERSION = '0.2.9';
+const VERSION = '0.3.0';
 
 /* ------------------------------------------------------------------ texts */
 const STR = {
@@ -15,6 +15,12 @@ const STR = {
     dashboard: 'Dashboard', charts: 'Charts', totals: 'Totals', inverters: 'Inverters', battery: 'Battery',
     inverter: 'Inverter', solar: 'Solar PV', grid: 'Grid', load: 'Load', mode: 'mode',
     today: 'Today', peak: 'Peak', present: 'present', absent: 'absent', perHour: '%/h', socRate: 'Charge rate',
+    cellsTitle: 'Cells · PACE BMS', cHigh: 'Highest', cLow: 'Lowest', cImb: 'Imbalance', cAvg: 'Average', temps: 'Temperatures',
+    bmsState: 'BMS state', chgMos: 'Charge MOSFET', dsgMos: 'Discharge MOSFET', noAlarms: 'No alarms', noProt: 'No active protections',
+    balancingN: 'balancing', bmsNoAnswer: 'BMS not answering', packV: 'Pack voltage', remFull: 'Remaining / full capacity',
+    lgNormal: 'normal', lgEdge: 'near the limit', lgBad: 'below 2.9 V / above 3.6 V', lgHi: 'highest', lgLo: 'lowest', lgBal: 'balancing',
+    lgScale: 'Bar scale', lgZoom: 'zoomed so the differences show', t_cells_1: 'Cells 1–4', t_cells_2: 'Cells 5–8', t_cells_3: 'Cells 9–12',
+    t_cells_4: 'Cells 13–16', t_mosfet: 'MOSFET', t_ambient: 'Ambient', bmsAddr: 'BMS address · protocol',
     pvToday: 'PV today', yesterday: 'Yesterday', generated: 'Generated', remaining: 'Remaining', tomorrow: 'Tomorrow',
     predicted: 'Predicted', now: 'Now', cloud: 'Cloud cover', overview: 'Overview', last24: 'last 24 hours',
     batteryPower: 'Battery power', soc: 'State of charge', batteryVoltage: 'Battery voltage',
@@ -50,6 +56,12 @@ const STR = {
     dashboard: 'Dashboard', charts: 'Grafice', totals: 'Totaluri', inverters: 'Invertoare', battery: 'Baterie',
     inverter: 'Invertor', solar: 'Solar', grid: 'Rețea', load: 'Consum', mode: 'mod',
     today: 'Azi', peak: 'Vârf', present: 'prezentă', absent: 'absentă', perHour: '%/h', socRate: 'Ritm de încărcare',
+    cellsTitle: 'Celule · PACE BMS', cHigh: 'Maximă', cLow: 'Minimă', cImb: 'Dezechilibru', cAvg: 'Medie', temps: 'Temperaturi',
+    bmsState: 'Stare BMS', chgMos: 'MOS încărcare', dsgMos: 'MOS descărcare', noAlarms: 'Fără alarme', noProt: 'Fără protecții active',
+    balancingN: 'echilibrare', bmsNoAnswer: 'BMS-ul nu răspunde', packV: 'Tensiune pachet', remFull: 'Capacitate rămasă / totală',
+    lgNormal: 'normal', lgEdge: 'aproape de capăt', lgBad: 'sub 2,9 V / peste 3,6 V', lgHi: 'cea mai mare', lgLo: 'cea mai mică', lgBal: 'se echilibrează',
+    lgScale: 'Scala barelor', lgZoom: 'mărită, ca diferențele să se vadă', t_cells_1: 'Celule 1–4', t_cells_2: 'Celule 5–8', t_cells_3: 'Celule 9–12',
+    t_cells_4: 'Celule 13–16', t_mosfet: 'MOSFET', t_ambient: 'Mediu', bmsAddr: 'Adresă BMS · protocol',
     pvToday: 'Solar azi', yesterday: 'Ieri', generated: 'Produs', remaining: 'Rămas', tomorrow: 'Mâine',
     predicted: 'Prognoză', now: 'Acum', cloud: 'Nori', overview: 'Privire de ansamblu', last24: 'ultimele 24 de ore',
     batteryPower: 'Putere baterie', soc: 'Stare de încărcare', batteryVoltage: 'Tensiune baterie',
@@ -310,6 +322,27 @@ table.sets td.all{background:rgba(255,255,255,.025)}
 .dlg{background:#13254f;border:1px solid #33497e;border-radius:16px;padding:18px 20px;max-width:460px;width:calc(100% - 32px)}
 .dlg h3{margin:0 0 10px;font-size:17px}.dlg ul{padding-left:18px;margin:8px 0}.dlg li{margin:4px 0}
 .dlg .row{display:flex;gap:10px;justify-content:flex-end;margin-top:14px}
+.bstats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px}
+.bst{background:rgba(255,255,255,.035);border:1px solid var(--line);border-radius:12px;padding:10px 12px;min-width:0}
+.bst b{display:block;font-size:12px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--mut)}
+.bst span{display:block;font-size:24px;font-weight:700;font-variant-numeric:tabular-nums;margin-top:2px;white-space:nowrap}
+.bst small{font-size:13px;color:var(--mut);font-weight:500;margin-left:4px}
+.cells{display:grid;grid-template-columns:repeat(16,1fr);gap:6px;align-items:end}
+.cell{display:flex;flex-direction:column;align-items:center;gap:4px;min-width:0}
+.cell .bar{position:relative;width:100%;height:150px;background:rgba(255,255,255,.06);border-radius:7px;overflow:hidden}
+.cell .bar i{position:absolute;left:0;right:0;bottom:0;border-radius:7px 7px 0 0}
+.cell.hi .bar{outline:2px solid var(--load);outline-offset:-2px}.cell.lo .bar{outline:2px solid var(--pv);outline-offset:-2px}
+.cell .v{font-size:12.5px;font-weight:650;font-variant-numeric:tabular-nums}.cell .n{font-size:11.5px;color:var(--mut)}
+.cell .bl{font-size:10px;color:var(--grid);font-weight:700;height:12px;letter-spacing:.04em}
+.blegend{display:flex;gap:16px;flex-wrap:wrap;margin-top:12px;font-size:13px;color:var(--mut)}
+.blegend i{display:inline-block;width:12px;height:12px;border-radius:3px;vertical-align:-2px;margin-right:6px}
+.btemps{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px}
+.chip{display:flex;align-items:center;gap:7px;padding:7px 12px;border-radius:10px;background:rgba(255,255,255,.035);border:1px solid var(--line);font-size:14px}
+.chip i{width:9px;height:9px;border-radius:50%;background:var(--bat)}.chip.off i{background:var(--bad)}.chip.mut{color:var(--mut)}.chip.mut i{background:#5d6a8a}
+.chip.warn{color:#ffd08a}.chip.warn i{background:var(--pv)}.chip.bad{color:#ffb3bb}.chip.bad i{background:var(--bad)}
+@media(max-width:900px){.cells{grid-template-columns:repeat(8,1fr)}.cell .bar{height:110px}.bstats{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:420px){.btemps{grid-template-columns:repeat(2,1fr)}.bst span{font-size:20px}}
 .hb{display:grid;grid-template-columns:130px 1fr 80px;gap:10px;align-items:center;margin:14px 0}
 .hb .t{height:18px;border-radius:9px;background:rgba(255,255,255,.07);position:relative;overflow:hidden}
 .hb .t i{position:absolute;top:0;bottom:0;border-radius:9px}
@@ -1496,7 +1529,10 @@ class GrowSolarPanel extends HTMLElement {
   /* ================================================================= battery */
   _battery(m) {
     m.innerHTML = `<div class="grid2"><section class="card"><h2>${this.t('battery')}<span class="sp"></span><span class="pill" id="b_state"></span></h2><div class="kv" id="b_kv"></div></section>
-      <section class="card" id="b_bars"></section></div>`;
+      <section class="card" id="b_bars"></section></div>${this._map.bms ? `
+      <section class="card" style="margin-top:14px"><h2>${this.t('cellsTitle')}<span class="sp"></span><span class="pill" id="c_state"></span><span class="pill" id="c_bal" hidden></span></h2><div id="c_body"></div></section>
+      <div class="grid2" style="margin-top:14px"><section class="card"><h2>${this.t('temps')}</h2><div class="btemps" id="c_temps"></div></section>
+      <section class="card"><h2>${this.t('bmsState')}</h2><div class="chips" id="c_chips"></div><div class="kv" id="c_kv"></div></section></div>` : ''}`;
     this._loadBatE();
   }
   async _loadBatE() {
@@ -1504,6 +1540,62 @@ class GrowSolarPanel extends HTMLElement {
     for (const k of ['bat_in', 'bat_out']) { try { e[k] = await this.energyToday(k); } catch (x) { e[k] = NaN; } }
     this._batE = e; this._batEt = Date.now();
     if (this._tab === 'battery') this._liveBattery();
+  }
+  /* PACE BMS read by GrowSolar over RS485-to-Ethernet: every cell, temperatures, MOSFETs, alarms */
+  _liveCells() {
+    const b = this._map.bms, body = this.$('#c_body');
+    if (!b || !body) return;
+    const T = (k) => this.t(k), f3 = (v) => fmtNum(v, 3);
+    const v = (b.cells || []).map((id) => this.num(id));
+    const st = this._hass && b.state ? this._hass.states[b.state] : null, at = (st && st.attributes) || {};
+    const pill = this.$('#c_state'), bp = this.$('#c_bal');
+    if (!v.some(isNum)) {
+      body.innerHTML = `<div class="note">${esc(T('bmsNoAnswer'))}</div>`;
+      if (pill) { pill.textContent = T('bmsNoAnswer'); pill.className = 'pill r'; }
+      return;
+    }
+    const ok = v.filter(isNum), hi = Math.max(...ok), lo = Math.min(...ok), ihi = v.indexOf(hi), ilo = v.indexOf(lo);
+    const cur = this.num(b.current), bal = Array.isArray(at.balancing) ? at.balancing : [];
+    if (pill) {
+      const s = st ? st.state : '';
+      pill.textContent = s === 'fault' || s === 'protection' || s === 'warning' ? s : T(cur > 0.3 ? 'charging' : cur < -0.3 ? 'discharging' : 'idle');
+      pill.className = 'pill' + (s === 'fault' || s === 'protection' ? ' r' : s === 'warning' || cur < -0.3 ? ' o' : '');
+    }
+    if (bp) { bp.hidden = !bal.length; bp.textContent = `${T('balancingN')}: ${bal.length}`; }
+    const span = Math.max(0.05, hi - lo), b0 = lo - span * 0.6, b1 = hi + span * 0.4;
+    const col = (x) => (x < 2.9 || x > 3.6 ? 'var(--bad)' : x < 3.05 || x > 3.45 ? 'var(--pv)' : 'var(--bat)');
+    const stat = (k, val, unit) => `<div class="bst"><b>${esc(T(k))}</b><span>${val}<small>${unit}</small></span></div>`;
+    body.innerHTML = `<div class="bstats">${stat('cHigh', f3(hi), 'V · #' + (ihi + 1))}${stat('cLow', f3(lo), 'V · #' + (ilo + 1))}` +
+      `${stat('cImb', Math.round((hi - lo) * 1000), 'mV')}${stat('cAvg', f3(ok.reduce((a, c) => a + c, 0) / ok.length), 'V')}</div>` +
+      `<div class="cells">${v.map((x, i) => `<div class="cell${i === ihi ? ' hi' : ''}${i === ilo ? ' lo' : ''}"><span class="bl">${bal.includes(i + 1) ? 'BAL' : ''}</span>` +
+        `<div class="bar"><i style="height:${isNum(x) ? Math.max(6, Math.min(100, (x - b0) / (b1 - b0) * 100)) : 0}%;background:${isNum(x) ? col(x) : 'transparent'}"></i></div>` +
+        `<span class="v">${isNum(x) ? f3(x) : '–'}</span><span class="n">#${i + 1}</span></div>`).join('')}</div>` +
+      `<div class="blegend"><span><i style="background:var(--bat)"></i>3.05–3.45 V ${esc(T('lgNormal'))}</span><span><i style="background:var(--pv)"></i>${esc(T('lgEdge'))}</span>` +
+      `<span><i style="background:var(--bad)"></i>${esc(T('lgBad'))}</span><span><i style="outline:2px solid var(--load);outline-offset:-2px"></i>${esc(T('lgHi'))}</span>` +
+      `<span><i style="outline:2px solid var(--pv);outline-offset:-2px"></i>${esc(T('lgLo'))}</span><span><b style="color:var(--grid);font-size:11px">BAL</b> ${esc(T('lgBal'))}</span>` +
+      `<span>${esc(T('lgScale'))}: ${f3(b0)}–${f3(b1)} V (${esc(T('lgZoom'))})</span></div>`;
+    const te = this.$('#c_temps');
+    if (te) te.innerHTML = Object.entries(b.temps || {}).map(([k, id]) => [k, this.num(id)]).filter(([, x]) => isNum(x))
+      .map(([k, x]) => stat('t_' + k, fmtNum(x, 1), '°C')).join('');
+    const ch = this.$('#c_chips');
+    if (ch) {
+      const chip = (cls, txt) => `<span class="chip ${cls}"><i></i>${esc(txt)}</span>`;
+      const list = (a) => (Array.isArray(a) ? a : []);
+      ch.innerHTML = (at.charge_mos == null ? '' : chip(at.charge_mos ? '' : 'off', `${T('chgMos')} ${at.charge_mos ? 'ON' : 'OFF'}`)) +
+        (at.discharge_mos == null ? '' : chip(at.discharge_mos ? '' : 'off', `${T('dsgMos')} ${at.discharge_mos ? 'ON' : 'OFF'}`)) +
+        list(at.faults).map((x) => chip('bad', x)).join('') +
+        (list(at.protections).length ? list(at.protections).map((x) => chip('bad', x)).join('') : chip('mut', T('noProt'))) +
+        (list(at.warnings).length ? list(at.warnings).map((x) => chip('warn', x)).join('') : chip('mut', T('noAlarms')));
+    }
+    const kv = this.$('#c_kv');
+    if (kv) {
+      const n = (id, d) => (isNum(this.num(id)) ? fmtNum(this.num(id), d) : null);
+      const rows = [[T('packV'), n(b.voltage, 2) && n(b.voltage, 2) + ' V'], [T('current'), n(b.current, 1) && n(b.current, 1) + ' A'],
+        [T('remFull'), n(b.remaining_ah, 1) && n(b.full_ah, 1) ? `${n(b.remaining_ah, 1)} / ${n(b.full_ah, 1)} Ah` : null],
+        [T('soc') + ' / ' + T('soh'), n(b.soc, 0) ? `${n(b.soc, 0)} % / ${n(b.soh, 0) || '–'} %` : null], [T('cycles'), n(b.cycles, 0)],
+        [T('bmsAddr'), at.address != null ? `${at.address} · ${at.protocol}` : null]].filter((r) => r[1]);
+      kv.innerHTML = rows.map(([k, x]) => `<span>${esc(k)}</span><span>${esc(x)}</span>`).join('');
+    }
   }
   _liveBattery() {
     const s = this.sys, T = (k) => this.t(k);
@@ -1535,6 +1627,7 @@ class GrowSolarPanel extends HTMLElement {
       [T('bmsChgV'), isNum(this.num(s.bms_chg_v)) ? fmtNum(this.num(s.bms_chg_v), 2) + ' V' : null],
       [T('bmsCodes'), s.bms_status ? [s.bms_status, s.bms_error, s.bms_warning].map((id) => { const v = this.txt(id); return v == null ? '–' : v === '0' && id !== s.bms_status ? T('none') : v; }).join(' · ') : null]
     ].filter((x) => x[1] != null && !/^–/.test(x[1]));
+    this._liveCells();
     const kv = this.$('#b_kv'); if (kv) kv.innerHTML = items.map(([k, v]) => `<span>${esc(k)}</span><span>${esc(v)}</span>`).join('');
     const maxW = Math.max(1, this.invs.length) * 6000;
     const bar = (label, v, lo, hi, color, txt, marks) => {

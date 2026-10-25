@@ -22,7 +22,9 @@
           "price": "Preț energie pe kWh",
           "currency": "Monedă",
           "inverter_order": "Ordinea invertoarelor, de ex. 1,3,2 (opțional)",
-          "inverter_names": "Numele invertoarelor, de ex. L1,L2,L3 (opțional)"
+          "inverter_names": "Numele invertoarelor, de ex. L1,L2,L3 (opțional)",
+          "bms_host": "PACE BMS: adresa convertorului RS485-Ethernet (opțional)",
+          "bms_port": "PACE BMS: portul TCP al convertorului"
         }
       },
       "manual": {
@@ -61,7 +63,9 @@
           "price": "Preț energie pe kWh",
           "currency": "Monedă",
           "inverter_order": "Ordinea invertoarelor, de ex. 1,3,2 (opțional)",
-          "inverter_names": "Numele invertoarelor, de ex. L1,L2,L3 (opțional)"
+          "inverter_names": "Numele invertoarelor, de ex. L1,L2,L3 (opțional)",
+          "bms_host": "PACE BMS: adresa convertorului RS485-Ethernet (opțional)",
+          "bms_port": "PACE BMS: portul TCP al convertorului"
         }
       },
       "manual": {

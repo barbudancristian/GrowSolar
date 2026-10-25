@@ -13,6 +13,9 @@ import homeassistant.helpers.config_validation as cv
 
 from .const import (
     CONF_BATTERY_KWH,
+    CONF_BMS_HOST,
+    CONF_BMS_PORT,
+    DEFAULT_BMS_PORT,
     CONF_CURRENCY,
     CONF_INVERTERS,
     CONF_MANUAL,
@@ -34,6 +37,7 @@ from .mapping import apply_order, build_map
 _LOGGER = logging.getLogger(__name__)
 
 CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
+PLATFORMS = ["sensor"]
 
 
 def mqtt_unique_ids(hass: HomeAssistant) -> dict[str, str]:
@@ -85,6 +89,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     )
     # energy before this moment comes from the Solar Assistant counters (moved to the dongles)
     entity_map["history_until"] = s.get(CONF_HISTORY_UNTIL) if entity_map.get("energy_history") else None
+    entity_map["bms"] = await _setup_bms(hass, entry, s)
     title = s.get(CONF_TITLE) or "GrowSolar"
     if PANEL_URL in hass.data.get("frontend_panels", {}):
         frontend.async_remove_panel(hass, PANEL_URL)
@@ -112,11 +117,39 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     return True
 
 
+async def _setup_bms(hass: HomeAssistant, entry: ConfigEntry, s: dict) -> dict | None:
+    """PACE BMS over an RS485-to-Ethernet converter: coordinator, sensors and their ids for the panel."""
+    host = (s.get(CONF_BMS_HOST) or "").strip()
+    hass.data.setdefault(DOMAIN, {}).pop("bms", None)
+    if not host:
+        return None
+    from .bms import PaceBmsCoordinator   # pylint: disable=import-outside-toplevel
+
+    coord = PaceBmsCoordinator(hass, host, int(s.get(CONF_BMS_PORT) or DEFAULT_BMS_PORT))
+    hass.data[DOMAIN]["bms"] = coord
+    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    # the first contact can take a while (protocol and address are searched), so it runs in the background
+    entry.async_create_background_task(hass, coord.async_refresh(), "growsolar_bms_first_refresh")
+    reg = er.async_get(hass)
+    ids = {
+        e.unique_id[len("growsolar_bms_"):]: e.entity_id
+        for e in reg.entities.values()
+        if e.platform == DOMAIN and e.unique_id.startswith("growsolar_bms_")
+    }
+    return {
+        "cells": [ids[k] for k in sorted(k for k in ids if k.startswith("cell_") and k[5:].isdigit())],
+        "temps": {k[5:]: v for k, v in ids.items() if k.startswith("temp_")},
+        **{k: v for k, v in ids.items() if not (k.startswith("cell_") and k[5:].isdigit()) and not k.startswith("temp_")},
+    }
+
+
 async def _async_reload(hass: HomeAssistant, entry: ConfigEntry) -> None:
     await hass.config_entries.async_reload(entry.entry_id)
 
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
-    """Remove the panel."""
+    """Remove the panel and the BMS sensors."""
     frontend.async_remove_panel(hass, PANEL_URL)
+    if hass.data.get(DOMAIN, {}).pop("bms", None) is not None:
+        return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
     return True

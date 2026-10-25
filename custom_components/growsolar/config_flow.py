@@ -13,6 +13,9 @@ from homeassistant.util import dt as dt_util
 from . import mqtt_unique_ids
 from .const import (
     CONF_BATTERY_KWH,
+    CONF_BMS_HOST,
+    CONF_BMS_PORT,
+    DEFAULT_BMS_PORT,
     CONF_CURRENCY,
     CONF_INVERTERS,
     CONF_HISTORY_UNTIL,
@@ -77,6 +80,11 @@ def _settings_schema(defaults: dict, detected: int) -> vol.Schema:
             # optional: show the inverters in another order ("1,3,2") and with names ("L1,L2,L3")
             vol.Optional(CONF_ORDER, description={"suggested_value": defaults.get(CONF_ORDER, "")}): str,
             vol.Optional(CONF_NAMES, description={"suggested_value": defaults.get(CONF_NAMES, "")}): str,
+            # optional: PACE BMS behind an RS485-to-Ethernet converter (TCP server, transparent)
+            vol.Optional(CONF_BMS_HOST, description={"suggested_value": defaults.get(CONF_BMS_HOST, "")}): str,
+            vol.Optional(CONF_BMS_PORT, default=int(defaults.get(CONF_BMS_PORT) or DEFAULT_BMS_PORT)): selector.NumberSelector(
+                selector.NumberSelectorConfig(min=1, max=65535, step=1, mode="box")
+            ),
         }
     )
 
@@ -134,6 +142,7 @@ class GrowSolarConfigFlow(ConfigFlow, domain=DOMAIN):
         detected = detect_inverters(source, mqtt_unique_ids(self.hass))
         if user_input is not None:
             user_input[CONF_INVERTERS] = int(user_input[CONF_INVERTERS])
+            user_input[CONF_BMS_PORT] = int(user_input.get(CONF_BMS_PORT) or DEFAULT_BMS_PORT)
             self._data.update(user_input)
             if source == SOURCE_MANUAL:
                 return await self.async_step_manual()
@@ -178,6 +187,8 @@ class GrowSolarOptionsFlow(OptionsFlow):
             # an emptied optional field is left out of user_input: clear it
             user_input.setdefault(CONF_ORDER, "")
             user_input.setdefault(CONF_NAMES, "")
+            user_input.setdefault(CONF_BMS_HOST, "")
+            user_input[CONF_BMS_PORT] = int(user_input.get(CONF_BMS_PORT) or DEFAULT_BMS_PORT)
             self._data = {**current, **user_input}
             return await self.async_step_manual()
         entity_map = build_map(source, uids, int(current.get(CONF_INVERTERS) or 1), current.get(CONF_MANUAL))

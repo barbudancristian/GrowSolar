@@ -1,7 +1,7 @@
 """Constants for GrowSolar."""
 
 DOMAIN = "growsolar"
-VERSION = "0.2.9"
+VERSION = "0.3.0"
 
 PANEL_URL = "growsolar"
 STATIC_URL = "/growsolar_static"
@@ -18,6 +18,9 @@ CONF_MANUAL = "manual"
 CONF_ORDER = "inverter_order"
 CONF_NAMES = "inverter_names"
 CONF_HISTORY_UNTIL = "history_until"
+CONF_BMS_HOST = "bms_host"
+CONF_BMS_PORT = "bms_port"
+DEFAULT_BMS_PORT = 4196
 
 SOURCE_DONGLE = "donglegrowatt"
 SOURCE_SA = "solar_assistant"

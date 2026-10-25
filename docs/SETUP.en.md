@@ -127,6 +127,16 @@ The weather entity used for the cloud cover after the current hour and the weath
 
 Names differ between integrations and versions; what matters is the meaning and the unit.
 
+### Battery cells (PACE BMS, optional)
+
+If the battery has a PACE BMS, GrowSolar can read it directly through an RS485-to-Ethernet converter (e.g. Waveshare RS485 to POE ETH) and show every cell, the temperatures, MOSFETs, balancing and alarms on the **Battery** page.
+
+1. Wire the converter to the free **RS485** port of the battery (on batteries talking to the inverter over CAN, the one next to CAN): pins 1/8 = B, 2/7 = A. If there is no answer, swap A and B or try one of the parallel RS485 ports.
+2. Converter: 9600 baud, 8N1, **TCP Server**, protocol **None** (transparent), static IP.
+3. In GrowSolar → **Configure**: the converter address and port (default 4196).
+
+The sensors are `sensor.growsolar_bms_*` (cells, temperatures, voltage, current, capacity, SOC/SOH, cycles, state). On first start GrowSolar finds the protocol version and the BMS address by itself.
+
 ## 6. Solar forecast and weather
 
 - **Forecast curve, *Remaining*, *Tomorrow*.** GrowSolar uses the solar forecast that Home Assistant already has in **Settings → Dashboards → Energy → Solar panels → Solar production forecast**: **Solcast** (30-minute steps) or **Forecast.Solar** (hourly). Install the integration you prefer and add it there. Without a forecast, the Solar Assistant prediction is used when that is the source.

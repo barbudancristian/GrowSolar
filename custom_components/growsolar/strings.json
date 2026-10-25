@@ -22,7 +22,9 @@
           "price": "Energy price per kWh",
           "currency": "Currency",
           "inverter_order": "Inverter order, e.g. 1,3,2 (optional)",
-          "inverter_names": "Inverter names, e.g. L1,L2,L3 (optional)"
+          "inverter_names": "Inverter names, e.g. L1,L2,L3 (optional)",
+          "bms_host": "PACE BMS: RS485-to-Ethernet converter address (optional)",
+          "bms_port": "PACE BMS: converter TCP port"
         }
       },
       "manual": {
@@ -61,7 +63,9 @@
           "price": "Energy price per kWh",
           "currency": "Currency",
           "inverter_order": "Inverter order, e.g. 1,3,2 (optional)",
-          "inverter_names": "Inverter names, e.g. L1,L2,L3 (optional)"
+          "inverter_names": "Inverter names, e.g. L1,L2,L3 (optional)",
+          "bms_host": "PACE BMS: RS485-to-Ethernet converter address (optional)",
+          "bms_port": "PACE BMS: converter TCP port"
         }
       },
       "manual": {
