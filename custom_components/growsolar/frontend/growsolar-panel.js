@@ -15,7 +15,6 @@ const STR = {
     dashboard: 'Dashboard', charts: 'Charts', totals: 'Totals', inverters: 'Inverters', battery: 'Battery',
     inverter: 'Inverter', solar: 'Solar PV', grid: 'Grid', load: 'Load', mode: 'mode',
     today: 'Today', peak: 'Peak', present: 'present', absent: 'absent', perHour: '%/h', socRate: 'Charge rate',
-    mExport: 'EXPORT', mImport: 'IMPORT', mDischarge: 'DISCHARGE', mCharge: 'CHARGE',
     pvToday: 'PV today', yesterday: 'Yesterday', generated: 'Generated', remaining: 'Remaining', tomorrow: 'Tomorrow',
     predicted: 'Predicted', now: 'Now', cloud: 'Cloud cover', overview: 'Overview', last24: 'last 24 hours',
     batteryPower: 'Battery power', soc: 'State of charge', batteryVoltage: 'Battery voltage',
@@ -51,7 +50,6 @@ const STR = {
     dashboard: 'Dashboard', charts: 'Grafice', totals: 'Totaluri', inverters: 'Invertoare', battery: 'Baterie',
     inverter: 'Invertor', solar: 'Solar', grid: 'Rețea', load: 'Consum', mode: 'mod',
     today: 'Azi', peak: 'Vârf', present: 'prezentă', absent: 'absentă', perHour: '%/h', socRate: 'Ritm de încărcare',
-    mExport: 'INJECȚIE', mImport: 'IMPORT', mDischarge: 'DESCĂRCARE', mCharge: 'ÎNCĂRCARE',
     pvToday: 'Solar azi', yesterday: 'Ieri', generated: 'Produs', remaining: 'Rămas', tomorrow: 'Mâine',
     predicted: 'Prognoză', now: 'Acum', cloud: 'Nori', overview: 'Privire de ansamblu', last24: 'ultimele 24 de ore',
     batteryPower: 'Putere baterie', soc: 'Stare de încărcare', batteryVoltage: 'Tensiune baterie',
@@ -1013,8 +1011,8 @@ class GrowSolarPanel extends HTMLElement {
     const pvMax = this._cfg.pv_kwp > 0 ? this._cfg.pv_kwp * 1000 : maxP;
     this.gauge(this.$('#g_load'), 'load', 'LOAD', load, maxP);
     this.gauge(this.$('#g_pv'), 'pv', 'SOLAR', pv, pvMax);
-    this.gauge(this.$('#g_grid'), 'grid', 'GRID', grid, maxP, true, [this.t('mExport'), this.t('mImport'), '#1f8a4c', '#c8202a']);
-    this.gauge(this.$('#g_bat'), 'bat', 'BAT', bat, maxP, true, [this.t('mDischarge'), this.t('mCharge'), '#c8202a', '#1f8a4c']);
+    this.gauge(this.$('#g_grid'), 'grid', 'GRID', grid, maxP, true, ['EXPORT', 'IMPORT', '#1f8a4c', '#c8202a']);
+    this.gauge(this.$('#g_bat'), 'bat', 'BAT', bat, maxP, true, ['DISCHARGE', 'CHARGE', '#c8202a', '#1f8a4c']);
   }
 
   /* ================================================================= charts view */
