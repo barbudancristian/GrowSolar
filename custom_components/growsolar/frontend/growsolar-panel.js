@@ -7,7 +7,7 @@
  * SPDX-License-Identifier: MIT
  */
 (() => {
-const VERSION = '0.2.8';
+const VERSION = '0.2.9';
 
 /* ------------------------------------------------------------------ texts */
 const STR = {
@@ -219,12 +219,18 @@ nav button.on,.seg button.on{background:#2c4fa8;border-color:#4a6fd0;color:#fff}
 .card h2{font-size:13px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--mut);margin:0 0 12px;display:flex;align-items:center;gap:8px}
 .card h2 .sp{flex:1}
 .tiles{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-.tile{display:flex;gap:14px;align-items:center;background:rgba(255,255,255,.035);border:1px solid var(--line);border-radius:14px;padding:12px;min-width:0}
+.tile{display:flex;gap:14px;align-items:center;background:rgba(255,255,255,.035);border:1px solid var(--line);border-radius:14px;padding:14px 16px;min-width:0}
 .tile.link{cursor:pointer}.tile.link:hover{border-color:#4a6fd0}
-.tile .ic{width:58px;height:58px;flex:none;border-radius:12px;display:grid;place-items:center;background:rgba(255,255,255,.04)}
-.tile .ic svg{width:40px;height:40px}
-.tile b{display:block;font-size:15px;margin-bottom:3px}
-.tile span{display:block;color:var(--mut);font-size:14px;line-height:1.35}
+.tile .ic{width:64px;height:64px;flex:none;border-radius:14px;display:grid;place-items:center;background:rgba(255,255,255,.04)}
+.tile .ic svg{width:46px;height:46px}
+.tile .tx{min-width:0;display:flex;flex-direction:column;gap:2px}
+.tile b{display:block;font-size:13px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--mut)}
+.tile span{display:block;color:var(--tx);font-size:16px;line-height:1.3;font-variant-numeric:tabular-nums}
+.tile .big{font-size:27px;font-weight:700;line-height:1.15;letter-spacing:-.01em;white-space:nowrap}
+.tile .sub{overflow-wrap:anywhere}
+.tile .big small{font-size:15px;font-weight:500;color:var(--mut);margin-left:6px;letter-spacing:0}
+.tile .big.txt{font-size:19px;font-weight:650;line-height:1.25;white-space:normal}
+.tile .sub{color:var(--mut)}
 .tile .red{color:var(--bad)}.tile .grn{color:var(--bat)}
 .gauges{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin:18px auto 0;max-width:560px}
 .gauge{text-align:center;min-width:0}
@@ -315,7 +321,8 @@ table.sets td.all{background:rgba(255,255,255,.025)}
 .pill.o{background:rgba(255,176,46,.14);color:#ffd08a}.pill.r{background:rgba(255,93,108,.14);color:#ffb3bb}
 footer{color:var(--mut);font-size:12px;text-align:center;margin-top:24px}
 @media(max-width:1000px){.grid2,.grid2.wide,.charts{grid-template-columns:1fr}.pvhead{grid-template-columns:1fr 1fr}.pvhead .bar{grid-column:1/-1;order:5}}
-@media(max-width:600px){.wrap{padding:10px 10px 30px}.tiles{grid-template-columns:1fr}.menu{display:block}nav{margin-left:0;width:100%}
+@media(max-width:400px){.tiles{grid-template-columns:1fr}}
+@media(max-width:600px){.wrap{padding:10px 10px 30px}.tile{padding:10px 12px;gap:10px}.tile .ic{width:44px;height:44px;border-radius:11px}.tile .ic svg{width:32px;height:32px}.tile .big{font-size:22px}.tile .big.txt{font-size:16px}.tile span{font-size:14px}.tile .big small{font-size:13px;margin-left:4px}.menu{display:block}nav{margin-left:0;width:100%}
   .tile .ic{width:46px;height:46px}.tile .ic svg{width:32px;height:32px}.hb{grid-template-columns:96px 1fr 70px}}
 `;
 
@@ -785,10 +792,10 @@ class GrowSolarPanel extends HTMLElement {
     m.innerHTML = `<div class="grid2 wide">
       <section class="card">
         <div class="tiles">
-          <div class="tile link" data-go="inverters"><div class="ic">${ICON.inverter}</div><div><b>${this.t('inverter')}</b><span id="d_mode">–</span></div></div>
-          <div class="tile"><div class="ic" id="d_sunic">${ICON.sun}</div><div><b>${this.t('solar')}</b><span id="d_pvday">–</span><span id="d_pvpeak">–</span></div></div>
-          <div class="tile"><div class="ic" id="d_gridic">${ICON.plug}</div><div><b>${this.t('grid')}</b><span id="d_gridv">–</span><span id="d_gridst"></span></div></div>
-          <div class="tile link" data-go="battery"><div class="ic" id="d_batic">${ICON.battery(NaN)}</div><div><b>${this.t('battery')}</b><span id="d_batv">–</span><span id="d_soc">–</span><span id="d_rate"></span></div></div>
+          <div class="tile link" data-go="inverters"><div class="ic">${ICON.inverter}</div><div class="tx"><b>${this.t('inverter')}</b><span class="big txt" id="d_mode">–</span></div></div>
+          <div class="tile"><div class="ic" id="d_sunic">${ICON.sun}</div><div class="tx"><b>${this.t('solar')}</b><span class="big" id="d_pvday">–</span><span class="sub" id="d_pvpeak"></span></div></div>
+          <div class="tile"><div class="ic" id="d_gridic">${ICON.plug}</div><div class="tx"><b>${this.t('grid')}</b><span class="big" id="d_gridv">–</span><span class="sub" id="d_gridst"></span></div></div>
+          <div class="tile link" data-go="battery"><div class="ic" id="d_batic">${ICON.battery(NaN)}</div><div class="tx"><b>${this.t('battery')}</b><span class="big" id="d_soc">–</span><span id="d_rate"></span><span class="sub" id="d_left"></span></div></div>
         </div>
         <div class="gauges">
           <div class="gauge" id="g_load"></div><div class="gauge" id="g_pv"></div>
@@ -875,6 +882,13 @@ class GrowSolarPanel extends HTMLElement {
     }
     svg.setAttribute('aria-label', label + ': ' + fmtW(value));
   }
+  /* hours until the battery is full (charging) or down to 10 % (discharging), from the battery power */
+  batTimeLeft() {
+    const soc = this.liveVal('soc'), bw = this.liveVal('bat'), bv = this.liveVal('batv'), ah = this.num(this.sys.capacity_ah);
+    const kwh = this._cfg.battery_kwh || (isNum(ah) && isNum(bv) ? ah * bv / 1000 : NaN), minSoc = 10;
+    const h = bw > 10 ? (100 - soc) / 100 * kwh * 1000 / bw : bw < -10 ? (soc - minSoc) / 100 * kwh * 1000 / -bw : NaN;
+    return { h, full: bw > 0 };
+  }
   /* how fast the battery charges or discharges, in % of the capacity per hour, from the battery power */
   socRate() {
     const bw = this.liveVal('bat'), bv = this.liveVal('batv'), ah = this.num(this.sys.capacity_ah);
@@ -954,7 +968,7 @@ class GrowSolarPanel extends HTMLElement {
       const totalDay = isNum(gen) ? gen + (isToday && isNum(fcLeft) ? fcLeft : 0) : NaN;
       this.$('#pv_bar').style.width = isNum(gen) && totalDay > 0 ? Math.min(100, gen / totalDay * 100) + '%' : '0';
       if (isToday) {
-        this.$('#d_pvday').textContent = this.t('today') + ': ' + fmtKwh(gen);
+        this.$('#d_pvday').innerHTML = isNum(gen) ? `${esc(fmtKwh(gen))}<small>${esc(this.t('today'))}</small>` : '–';
         this.$('#d_pvpeak').textContent = this.t('peak') + ': ' + fmtW(peak);
       }
       this.chart(this.$('#c_pvday'), { id: 'pvday', t0, t1, n, unit: 'W', unitR: cloud ? '%' : '', rightRange: [0, 100, 50],
@@ -1002,8 +1016,10 @@ class GrowSolarPanel extends HTMLElement {
     const gridOn = isNum(gv) && gv > 100;
     set('#d_gridst', isNum(gv) ? this.t(gridOn ? 'present' : 'absent') : '');
     const gi = this.$('#d_gridic'); if (gi) gi.innerHTML = isNum(gv) && !gridOn ? ICON.plugOff : ICON.plug;
-    set('#d_batv', isNum(bv) ? bv.toFixed(1) + ' V' : '–');
-    set('#d_soc', isNum(soc) ? Math.round(soc) + ' %' : '–');
+    const se = this.$('#d_soc');
+    if (se) se.innerHTML = isNum(soc) ? `${Math.round(soc)} %${isNum(bv) ? `<small>${bv.toFixed(1)} V</small>` : ''}` : '–';
+    const tl = this.batTimeLeft();
+    set('#d_left', isNum(tl.h) ? this.t('timeLeft') + ': ' + fmtDur(tl.h) + ' ' + this.t(tl.full ? 'toFull' : 'toEmpty') : '');
     const bi = this.$('#d_batic'); if (bi) bi.innerHTML = ICON.battery(soc);
     const rate = this.socRate(), re = this.$('#d_rate');
     if (re && isNum(rate)) { re.textContent = (rate > 0 ? '+' : rate < 0 ? '−' : '') + Math.abs(rate).toFixed(1) + ' ' + this.t('perHour'); re.className = rate < -0.05 ? 'red' : rate > 0.05 ? 'grn' : ''; }
@@ -1496,8 +1512,7 @@ class GrowSolarPanel extends HTMLElement {
     const soc = this.liveVal('soc'), bw = this.liveVal('bat'), bv = this.liveVal('batv');
     let ba = this.liveVal('bata'); if (!isNum(ba) && isNum(bw) && isNum(bv) && bv > 0) ba = bw / bv;
     const ah = this.num(s.capacity_ah), kwh = this._cfg.battery_kwh || (isNum(ah) && isNum(bv) ? ah * bv / 1000 : NaN);
-    const minSoc = 10;
-    const h = bw > 10 ? (100 - soc) / 100 * kwh * 1000 / bw : bw < -10 ? (soc - minSoc) / 100 * kwh * 1000 / -bw : NaN;
+    const h = this.batTimeLeft().h;
     const st = this.$('#b_state');
     if (st) { st.textContent = T(bw > 10 ? 'charging' : bw < -10 ? 'discharging' : 'idle'); st.className = 'pill' + (bw < -10 ? ' o' : ''); }
     const items = [
