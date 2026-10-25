@@ -849,8 +849,8 @@ class GrowSolarPanel extends HTMLElement {
       }
       o += `<text x="20" y="40" font-family="${COND}" font-weight="600" font-size="27" fill="${INK}">${inW ? 'W' : 'kW'}</text>` +
         `<text x="20" y="53" font-family="Roboto,'Segoe UI',sans-serif" font-weight="700" font-size="8.5" letter-spacing=".8" fill="${INK}">${esc(label)}</text>`;
-      if (signed) o += `<text x="86" y="160" font-family="Roboto,sans-serif" font-size="6.5" letter-spacing=".6" fill="${INK}">${esc(sides[0])}</text>` +
-        `<text x="${cx - 6}" y="${cy - r + 38}" text-anchor="end" font-family="Roboto,sans-serif" font-size="6.5" letter-spacing=".6" fill="${INK}">${esc(sides[1])}</text>`;
+      if (signed) o += `<text class="sd0" x="86" y="160" font-family="Roboto,sans-serif" font-weight="700" font-size="7" letter-spacing=".6" fill="${sides[2]}" visibility="hidden">${esc(sides[0])}</text>` +
+        `<text class="sd1" x="${cx - 6}" y="${cy - r + 38}" text-anchor="end" font-family="Roboto,sans-serif" font-weight="700" font-size="7" letter-spacing=".6" fill="${sides[3]}" visibility="hidden">${esc(sides[1])}</text>`;
       const screw = (x, y) => `<circle cx="${x}" cy="${y}" r="3.6" fill="#c9b27a" stroke="#7a6a3e" stroke-width=".6"/><line x1="${x - 2.4}" y1="${y}" x2="${x + 2.4}" y2="${y}" stroke="#6a5a30" stroke-width=".8"/>`;
       o += screw(182, 104) + screw(108, 180) + `<rect x="18" y="170" width="70" height="15" rx="2" fill="#1d2a1d"/>` +
         `<text class="rd" x="84" y="181.5" text-anchor="end" font-family="ui-monospace,Consolas,monospace" font-size="10" font-weight="700" fill="#9dffb0"></text>` +
@@ -870,6 +870,11 @@ class GrowSolarPanel extends HTMLElement {
     const nd = svg.querySelector('.needle'), rot = `rotate(${(180 - ang(v)).toFixed(2)}deg)`;
     if (nd.style.transform !== rot) requestAnimationFrame(() => { nd.style.transform = rot; });
     svg.querySelector('.rd').textContent = fmtW(value);
+    if (signed) {   // name only the direction the power flows now (none around zero)
+      const dir = isNum(value) && Math.abs(value) >= 10 ? (value < 0 ? 0 : 1) : -1;
+      svg.querySelector('.sd0').setAttribute('visibility', dir === 0 ? 'visible' : 'hidden');
+      svg.querySelector('.sd1').setAttribute('visibility', dir === 1 ? 'visible' : 'hidden');
+    }
     svg.setAttribute('aria-label', label + ': ' + fmtW(value));
   }
   /* how fast the battery charges or discharges, in % of the capacity per hour, from the battery power */
