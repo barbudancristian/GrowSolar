@@ -7,7 +7,7 @@
  * SPDX-License-Identifier: MIT
  */
 (() => {
-const VERSION = '0.2.6';
+const VERSION = '0.2.8';
 
 /* ------------------------------------------------------------------ texts */
 const STR = {
@@ -15,6 +15,7 @@ const STR = {
     dashboard: 'Dashboard', charts: 'Charts', totals: 'Totals', inverters: 'Inverters', battery: 'Battery',
     inverter: 'Inverter', solar: 'Solar PV', grid: 'Grid', load: 'Load', mode: 'mode',
     today: 'Today', peak: 'Peak', present: 'present', absent: 'absent', perHour: '%/h', socRate: 'Charge rate',
+    mExport: 'EXPORT', mImport: 'IMPORT', mDischarge: 'DISCHARGE', mCharge: 'CHARGE',
     pvToday: 'PV today', yesterday: 'Yesterday', generated: 'Generated', remaining: 'Remaining', tomorrow: 'Tomorrow',
     predicted: 'Predicted', now: 'Now', cloud: 'Cloud cover', overview: 'Overview', last24: 'last 24 hours',
     batteryPower: 'Battery power', soc: 'State of charge', batteryVoltage: 'Battery voltage',
@@ -50,6 +51,7 @@ const STR = {
     dashboard: 'Dashboard', charts: 'Grafice', totals: 'Totaluri', inverters: 'Invertoare', battery: 'Baterie',
     inverter: 'Invertor', solar: 'Solar', grid: 'Rețea', load: 'Consum', mode: 'mod',
     today: 'Azi', peak: 'Vârf', present: 'prezentă', absent: 'absentă', perHour: '%/h', socRate: 'Ritm de încărcare',
+    mExport: 'INJECȚIE', mImport: 'IMPORT', mDischarge: 'DESCĂRCARE', mCharge: 'ÎNCĂRCARE',
     pvToday: 'Solar azi', yesterday: 'Ieri', generated: 'Produs', remaining: 'Rămas', tomorrow: 'Mâine',
     predicted: 'Prognoză', now: 'Acum', cloud: 'Nori', overview: 'Privire de ansamblu', last24: 'ultimele 24 de ore',
     batteryPower: 'Putere baterie', soc: 'Stare de încărcare', batteryVoltage: 'Tensiune baterie',
@@ -139,6 +141,12 @@ function fmtW(v) {
   const a = Math.abs(v);
   return a >= 1000 ? (v / 1000).toFixed(a >= 10000 ? 1 : 2) + ' kW' : Math.round(v) + ' W';
 }
+/* round a scale end up to a "nice" number and pick a major tick step that divides it */
+function niceMax(x) { const e = Math.pow(10, Math.floor(Math.log10(x))); for (const m of [1, 1.2, 1.5, 2, 2.5, 3, 4, 5, 6, 8, 10]) if (m * e >= x - 1e-9) return m * e; return 10 * e; }
+function majorStep(max, lim) {
+  for (const s of [0.1, 0.2, 0.25, 0.5, 1, 2, 2.5, 5, 10, 20, 25, 50, 100, 200, 250, 500]) { const n = max / s; if (n <= lim && Math.abs(n - Math.round(n)) < 1e-6) return s; }
+  return max / 5;
+}
 function fmtKwh(v) { return isNum(v) ? (Math.abs(v) >= 100 ? v.toFixed(0) : v.toFixed(1)) + ' kWh' : '–'; }
 function fmtDur(h) {
   if (!isNum(h) || h <= 0) return '–';
@@ -220,11 +228,12 @@ nav button.on,.seg button.on{background:#2c4fa8;border-color:#4a6fd0;color:#fff}
 .tile b{display:block;font-size:15px;margin-bottom:3px}
 .tile span{display:block;color:var(--mut);font-size:14px;line-height:1.35}
 .tile .red{color:var(--bad)}.tile .grn{color:var(--bat)}
-.gauges{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:14px}
-.gauge{text-align:center}
-.gauge svg{width:100%;max-width:230px;height:auto}
-.gv{font-size:22px;font-weight:700;fill:var(--tx);text-anchor:middle;font-variant-numeric:tabular-nums}
-.gl{font-size:13px;fill:var(--mut);text-anchor:middle}
+.gauges{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin:18px auto 0;max-width:560px}
+.gauge{text-align:center;min-width:0}
+.gauge svg{display:block;width:100%;max-width:250px;height:auto;margin:0 auto;filter:drop-shadow(0 6px 14px rgba(0,0,0,.45))}
+.gauge .needle{transition:transform 1.1s cubic-bezier(.34,1.45,.5,1)}
+@media (prefers-reduced-motion:reduce){.gauge .needle{transition:none}}
+@media(max-width:600px){.gauges{gap:10px}}
 .pvhead{display:grid;grid-template-columns:auto auto 1fr auto auto;gap:14px;align-items:center;margin-bottom:6px}
 .pvhead .k{font-size:12px;color:var(--mut)}.pvhead .v{font-size:17px;font-weight:650}
 .pvhead .dim .v{color:var(--mut);font-weight:500}
@@ -807,19 +816,61 @@ class GrowSolarPanel extends HTMLElement {
     this.$('#pv_next').addEventListener('click', () => { if (this._pvDay < 0) { this._pvDay++; this._loadPvDay(); } });
     this._reload();
   }
-  gauge(el, label, value, max, color, signed) {
+  /* analog panel meter (ST-96 style): pivot bottom-right, 90° scale from the left (min) to the top (max).
+     signed meters have zero in the middle (like a cos φ meter): negative values on the lower-left side.
+     Below 1 kW the scale switches to W (0–1000 W or ±1000 W), with a little hysteresis. */
+  gauge(el, key, label, value, max, signed, sides) {
     if (!el) return;
-    const r = 80, cx = 100, cy = 98, a0 = Math.PI, frac = isNum(value) ? Math.max(-1, Math.min(1, value / (max || 1))) : 0;
-    const pt = (a) => [cx + r * Math.cos(a), cy - r * Math.sin(a)];
-    const arc = (f0, f1, col, w) => {
-      const A0 = a0 - f0 * Math.PI, A1 = a0 - f1 * Math.PI, [x0, y0] = pt(A0), [x1, y1] = pt(A1);
-      return `<path d="M${x0} ${y0}A${r} ${r} 0 ${Math.abs(f1 - f0) > 1 ? 1 : 0} ${f1 > f0 ? 1 : 0} ${x1} ${y1}" fill="none" stroke="${col}" stroke-width="${w}" stroke-linecap="round"/>`;
-    };
-    let o = `<svg viewBox="0 0 200 120">` + arc(0, 1, 'rgba(255,255,255,.08)', 16);
-    if (signed) { if (Math.abs(frac) > 0.002) o += frac > 0 ? arc(0.5, 0.5 + frac / 2, color, 16) : arc(0.5 + frac / 2, 0.5, COL.pv, 16); o += `<line x1="${cx}" y1="${cy - r - 10}" x2="${cx}" y2="${cy - r + 10}" stroke="rgba(255,255,255,.35)"/>`; }
-    else if (frac > 0.002) o += arc(0, frac, color, 16);
-    o += `<text x="100" y="84" class="gv">${fmtW(value)}</text><text x="100" y="106" class="gl">${esc(label)}</text></svg>`;
-    el.innerHTML = o;
+    const st = (this._gst = this._gst || {});
+    const a = Math.abs(isNum(value) ? value : 0), inW = st[key + 'W'] ? a < 1100 : a < 1000;
+    st[key + 'W'] = inW;
+    const k = inW ? 1 : 1000, full = niceMax((inW ? 1000 : max || 6000) / k);
+    const step = majorStep(full, signed ? 3 : 6), minor = step / (full / step <= 3 ? (signed ? 5 : 10) : 5);
+    const lo = signed ? -full : 0, hi = full, cx = 164, cy = 158, r = 116;
+    const ang = (v) => 180 - (v - lo) / (hi - lo) * 90;
+    const P = (d, rr) => [cx + rr * Math.cos(d * Math.PI / 180), cy - rr * Math.sin(d * Math.PI / 180)];
+    const f = (n) => n.toFixed(1), INK = '#141414', COND = "'Roboto Condensed','Arial Narrow',Roboto,sans-serif";
+    const sig = [inW, full, signed, label, (sides || []).join()].join('|');
+    let svg = el.querySelector('svg');
+    if (!svg || svg.dataset.sig !== sig) {
+      let o = `<svg viewBox="0 0 200 200" role="img"><rect width="200" height="200" rx="5" fill="#0b0b0b"/>` +
+        `<rect x="9" y="9" width="182" height="182" rx="2" fill="#f7f6f1" stroke="#d9d6cc" stroke-width="1.2"/>`;
+      const arc = (a0, a1, rr, col, w, op) => { const [x0, y0] = P(a0, rr), [x1, y1] = P(a1, rr);
+        return `<path d="M${f(x0)} ${f(y0)}A${rr} ${rr} 0 0 1 ${f(x1)} ${f(y1)}" fill="none" stroke="${col}" stroke-width="${w}" opacity="${op}"/>`; };
+      if (signed) o += arc(180, ang(0) + 0.8, r + 3, sides[2], 3, 0.75) + arc(ang(0) - 0.8, 90, r + 3, sides[3], 3, 0.75);
+      o += arc(180, 90, r, INK, 1, 1);
+      const n = Math.round((hi - lo) / minor), on = (v, s) => Math.abs(v / s - Math.round(v / s)) < 1e-6;
+      for (let i = 0; i <= n; i++) {
+        const v = lo + i * minor, d = ang(v), maj = on(v, step), L = maj ? 11 : on(v, step / 2) ? 7.5 : 5;
+        const [x0, y0] = P(d, r), [x1, y1] = P(d, r + L);
+        o += `<line x1="${f(x0)}" y1="${f(y0)}" x2="${f(x1)}" y2="${f(y1)}" stroke="${INK}" stroke-width="${maj ? 1.8 : 0.8}"/>`;
+        if (maj) { const [tx, ty] = P(d, r - 13), t = String(+Math.abs(v).toFixed(2));
+          o += `<text x="${f(tx)}" y="${f(ty + 4.5)}" text-anchor="middle" font-family="${COND}" font-weight="600" font-size="${t.length > 3 ? 11 : 13}" fill="${INK}">${t}</text>`; }
+      }
+      o += `<text x="20" y="40" font-family="${COND}" font-weight="600" font-size="27" fill="${INK}">${inW ? 'W' : 'kW'}</text>` +
+        `<text x="20" y="53" font-family="Roboto,'Segoe UI',sans-serif" font-weight="700" font-size="8.5" letter-spacing=".8" fill="${INK}">${esc(label)}</text>`;
+      if (signed) o += `<text x="86" y="160" font-family="Roboto,sans-serif" font-size="6.5" letter-spacing=".6" fill="${INK}">${esc(sides[0])}</text>` +
+        `<text x="${cx - 6}" y="${cy - r + 38}" text-anchor="end" font-family="Roboto,sans-serif" font-size="6.5" letter-spacing=".6" fill="${INK}">${esc(sides[1])}</text>`;
+      const screw = (x, y) => `<circle cx="${x}" cy="${y}" r="3.6" fill="#c9b27a" stroke="#7a6a3e" stroke-width=".6"/><line x1="${x - 2.4}" y1="${y}" x2="${x + 2.4}" y2="${y}" stroke="#6a5a30" stroke-width=".8"/>`;
+      o += screw(182, 104) + screw(108, 180) + `<rect x="18" y="170" width="70" height="15" rx="2" fill="#1d2a1d"/>` +
+        `<text class="rd" x="84" y="181.5" text-anchor="end" font-family="ui-monospace,Consolas,monospace" font-size="10" font-weight="700" fill="#9dffb0"></text>` +
+        `<text x="128" y="183" font-family="Roboto,sans-serif" font-size="7.5" fill="#333">ST-96</text>` +
+        `<g class="needle" style="transform-origin:${cx}px ${cy}px;transform:rotate(${signed ? 45 : 0}deg)">` +
+        `<path d="M${cx} ${cy - 1.2}L${cx - r - 4} ${cy - 0.25}L${cx - r - 4} ${cy + 0.25}L${cx} ${cy + 1.2}Z" fill="${INK}"/>` +
+        `<path d="M${cx - 30} ${cy - 2.2}L${cx} ${cy - 3}L${cx} ${cy + 3}L${cx - 30} ${cy + 2.2}Z" fill="${INK}"/>` +
+        `<path d="M${cx + 2} ${cy - 14}a16 16 0 0 1 14 14l-2 5h-10z" fill="${INK}"/></g>` +
+        `<circle cx="${cx}" cy="${cy}" r="9" fill="#111"/><circle cx="${cx}" cy="${cy}" r="5.5" fill="#c8202a"/><circle cx="${cx - 1.5}" cy="${cy - 1.5}" r="1.6" fill="#ff8a8a" opacity=".8"/></svg>`;
+      el.innerHTML = o;
+      svg = el.querySelector('svg');
+      svg.dataset.sig = sig;
+      svg.querySelector('.needle').getBoundingClientRect();   // start at rest, then swing to the value
+    }
+    let v = isNum(value) ? value / k : lo;
+    v = Math.max(lo - (hi - lo) * 0.03, Math.min(hi + (hi - lo) * 0.03, v));
+    const nd = svg.querySelector('.needle'), rot = `rotate(${(180 - ang(v)).toFixed(2)}deg)`;
+    if (nd.style.transform !== rot) requestAnimationFrame(() => { nd.style.transform = rot; });
+    svg.querySelector('.rd').textContent = fmtW(value);
+    svg.setAttribute('aria-label', label + ': ' + fmtW(value));
   }
   /* how fast the battery charges or discharges, in % of the capacity per hour, from the battery power */
   socRate() {
@@ -955,10 +1006,10 @@ class GrowSolarPanel extends HTMLElement {
     if (re && isNum(rate)) { re.textContent = (rate > 0 ? '+' : rate < 0 ? '−' : '') + Math.abs(rate).toFixed(1) + ' ' + this.t('perHour'); re.className = rate < -0.05 ? 'red' : rate > 0.05 ? 'grn' : ''; }
     const n = Math.max(1, this.invs.length), maxP = n * 6000;
     const pvMax = this._cfg.pv_kwp > 0 ? this._cfg.pv_kwp * 1000 : maxP;
-    this.gauge(this.$('#g_load'), this.t('load'), load, maxP, COL.load);
-    this.gauge(this.$('#g_pv'), this.t('solar'), pv, pvMax, COL.pv);
-    this.gauge(this.$('#g_grid'), this.t('grid'), grid, maxP, COL.grid);
-    this.gauge(this.$('#g_bat'), this.t('battery'), bat, maxP, COL.bat, true);
+    this.gauge(this.$('#g_load'), 'load', 'LOAD', load, maxP);
+    this.gauge(this.$('#g_pv'), 'pv', 'SOLAR', pv, pvMax);
+    this.gauge(this.$('#g_grid'), 'grid', 'GRID', grid, maxP, true, [this.t('mExport'), this.t('mImport'), '#1f8a4c', '#c8202a']);
+    this.gauge(this.$('#g_bat'), 'bat', 'BAT', bat, maxP, true, [this.t('mDischarge'), this.t('mCharge'), '#c8202a', '#1f8a4c']);
   }
 
   /* ================================================================= charts view */
