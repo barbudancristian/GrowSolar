@@ -99,7 +99,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
     a = coord.data["analog"] if coord.data else None
     n_cells = len(a.cells) if a else DEFAULT_CELLS
     n_temps = len(a.temps) if a else len(TEMP_NAMES)
-    specs = list(SPECS)
+    specs = [s for s in SPECS if not (a and a.design_ah is None and s.key in ("soh", "design_ah"))]
     specs += [Spec(f"cell_{i + 1:02d}", f"cell {i + 1:02d}", _cell(i), V, SensorDeviceClass.VOLTAGE, 3) for i in range(n_cells)]
     for i in range(n_temps):
         key = TEMP_NAMES[i] if i < len(TEMP_NAMES) else f"temp_{i + 1}"
@@ -121,7 +121,8 @@ class BmsSensor(CoordinatorEntity[PaceBmsCoordinator], SensorEntity):
         super().__init__(coord)
         self.spec = spec
         self._attr_unique_id = f"growsolar_bms_{spec.key}"
-        self._attr_name = f"GrowSolar BMS {spec.name}"
+        self._attr_has_entity_name = True
+        self._attr_name = spec.name[0].upper() + spec.name[1:]      # shown as "PACE BMS Cell 01"
         self.entity_id = f"sensor.growsolar_bms_{spec.key}"
         self._attr_native_unit_of_measurement = spec.unit
         self._attr_device_class = spec.dc
@@ -149,7 +150,8 @@ class BmsSensor(CoordinatorEntity[PaceBmsCoordinator], SensorEntity):
             return None
         al: Alarm | None = self.coordinator.data.get("alarm")
         c = self.coordinator
-        attrs: dict[str, Any] = {"address": c.adr, "protocol": f"{c.rver or c.ver or 0:#04x}", "current_unit_a": c.scale}
+        attrs: dict[str, Any] = {"address": c.adr, "protocol": f"{c.rver or c.ver or 0:#04x}", "current_unit_a": c.scale,
+                                 "balancing_reported": c.rver != 0x20}
         if al is not None:
             attrs.update(
                 charge_mos=al.charge_mos, discharge_mos=al.discharge_mos, current_limit=al.current_limit,

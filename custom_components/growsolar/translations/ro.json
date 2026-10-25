@@ -6,7 +6,7 @@
     "step": {
       "user": {
         "title": "Sursa datelor",
-        "description": "De unde citește GrowSolar sistemul solar?\n\n- **DongleGrowatt** – invertor(oare) Growatt cu dongle-ul ShineWiFi-X2 scris cu firmware-ul [Growatt-SPF6K-HA](https://github.com/barbudancristian/Growatt-SPF6K-HA), câte un dongle pe fiecare invertor, cu pachetul lui pentru Home Assistant instalat. Așa GrowSolar poate și schimba setările invertoarelor.\n- **Solar Assistant** – fără dongle-uri: invertorul sau invertoarele sunt legate cu cablu USB la Solar Assistant, iar Home Assistant ia datele de la Solar Assistant prin MQTT.\n- **Aleg eu senzorii** – alt tip de invertor (nu Growatt) sau orice sistem ai cărui senzori există deja în Home Assistant: alegi la pasul următor senzorii de putere, baterie și energie.\n\nGăsite acum: invertoare DongleGrowatt: {dongle}, invertoare Solar Assistant: {sa}.",
+        "description": "De unde citește GrowSolar sistemul solar?\n\n- **DongleGrowatt** – invertor(oare) Growatt cu dongle-ul ShineWiFi-X2 scris cu firmware-ul [Growatt-SPF6K-HA]({firmware_url}), câte un dongle pe fiecare invertor, cu pachetul lui pentru Home Assistant instalat. Așa GrowSolar poate și schimba setările invertoarelor.\n- **Solar Assistant** – fără dongle-uri: invertorul sau invertoarele sunt legate cu cablu USB la Solar Assistant, iar Home Assistant ia datele de la Solar Assistant prin MQTT.\n- **Aleg eu senzorii** – alt tip de invertor (nu Growatt) sau orice sistem ai cărui senzori există deja în Home Assistant: alegi la pasul următor senzorii de putere, baterie și energie.\n\nGăsite acum: invertoare DongleGrowatt: {dongle}, invertoare Solar Assistant: {sa}.",
         "data": {
           "source": "Sursa"
         }

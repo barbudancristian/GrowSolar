@@ -133,6 +133,7 @@ class GrowSolarConfigFlow(ConfigFlow, domain=DOMAIN):
             ),
             description_placeholders={
                 "dongle": str(found[SOURCE_DONGLE]),
+                "firmware_url": "https://github.com/barbudancristian/Growatt-SPF6K-HA",
                 "sa": str(found[SOURCE_SA]),
             },
         )

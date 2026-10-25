@@ -7,7 +7,7 @@
  * SPDX-License-Identifier: MIT
  */
 (() => {
-const VERSION = '0.3.1';
+const VERSION = '0.3.2';
 
 /* ------------------------------------------------------------------ texts */
 const STR = {
@@ -857,13 +857,15 @@ class GrowSolarPanel extends HTMLElement {
   /* analog panel meter (ST-96 style): pivot bottom-right, 90° scale from the left (min) to the top (max).
      signed meters have zero in the middle (like a cos φ meter): negative values on the lower-left side.
      Below 1 kW the scale switches to W (0–1000 W or ±1000 W), with a little hysteresis. */
-  gauge(el, key, label, value, max, signed, sides) {
+  gauge(el, key, label, value, max, signed, sides, kw) {
     if (!el) return;
     const st = (this._gst = this._gst || {});
     const a = Math.abs(isNum(value) ? value : 0), inW = st[key + 'W'] ? a < 1100 : a < 1000;
     st[key + 'W'] = inW;
-    const k = inW ? 1 : 1000, full = niceMax((inW ? 1000 : max || 6000) / k);
-    const step = majorStep(full, signed ? 3 : 6), minor = step / (full / step <= 3 ? (signed ? 5 : 10) : 5);
+    // kw: fixed kW scale for this meter, e.g. {full: 10, step: 1, label: 2} = ±10 kW, a long tick every kW, a number every 2 kW
+    const k = inW ? 1 : 1000, full = !inW && kw ? kw.full : niceMax((inW ? 1000 : max || 6000) / k);
+    const step = !inW && kw ? kw.step : majorStep(full, signed ? 3 : 6);
+    const minor = !inW && kw ? step / 2 : step / (full / step <= 3 ? (signed ? 5 : 10) : 5), every = !inW && kw ? kw.label || step : step;
     const lo = signed ? -full : 0, hi = full, cx = 164, cy = 158, r = 116;
     const ang = (v) => 180 - (v - lo) / (hi - lo) * 90;
     const P = (d, rr) => [cx + rr * Math.cos(d * Math.PI / 180), cy - rr * Math.sin(d * Math.PI / 180)];
@@ -882,7 +884,7 @@ class GrowSolarPanel extends HTMLElement {
         const v = lo + i * minor, d = ang(v), maj = on(v, step), L = maj ? 11 : on(v, step / 2) ? 7.5 : 5;
         const [x0, y0] = P(d, r), [x1, y1] = P(d, r + L);
         o += `<line x1="${f(x0)}" y1="${f(y0)}" x2="${f(x1)}" y2="${f(y1)}" stroke="${INK}" stroke-width="${maj ? 1.8 : 0.8}"/>`;
-        if (maj) { const [tx, ty] = P(d, r - 13), t = String(+Math.abs(v).toFixed(2));
+        if (maj && on(v, every)) { const [tx, ty] = P(d, r - 13), t = String(+Math.abs(v).toFixed(2));
           o += `<text x="${f(tx)}" y="${f(ty + 4.5)}" text-anchor="middle" font-family="${COND}" font-weight="600" font-size="${t.length > 3 ? 11 : 13}" fill="${INK}">${t}</text>`; }
       }
       o += `<text x="20" y="40" font-family="${COND}" font-weight="600" font-size="27" fill="${INK}">${inW ? 'W' : 'kW'}</text>` +
@@ -1061,7 +1063,7 @@ class GrowSolarPanel extends HTMLElement {
     this.gauge(this.$('#g_load'), 'load', 'LOAD', load, maxP);
     this.gauge(this.$('#g_pv'), 'pv', 'SOLAR', pv, pvMax);
     this.gauge(this.$('#g_grid'), 'grid', 'GRID', grid, maxP, true, ['EXPORT', 'IMPORT', '#1f8a4c', '#c8202a']);
-    this.gauge(this.$('#g_bat'), 'bat', 'BAT', bat, maxP, true, ['DISCHARGE', 'CHARGE', '#c8202a', '#1f8a4c']);
+    this.gauge(this.$('#g_bat'), 'bat', 'BAT', bat, maxP, true, ['DISCHARGE', 'CHARGE', '#c8202a', '#1f8a4c'], { full: 10, step: 1, label: 2 });
   }
 
   /* ================================================================= charts view */
@@ -1561,7 +1563,8 @@ class GrowSolarPanel extends HTMLElement {
       pill.textContent = s === 'fault' || s === 'protection' || s === 'warning' ? s : T(cur > 0.3 ? 'charging' : cur < -0.3 ? 'discharging' : 'idle');
       pill.className = 'pill' + (s === 'fault' || s === 'protection' ? ' r' : s === 'warning' || cur < -0.3 ? ' o' : '');
     }
-    if (bp) { bp.hidden = !bal.length; bp.textContent = `${T('balancingN')}: ${bal.length}`; }
+    const balOk = at.balancing_reported !== false;
+    if (bp) { bp.hidden = !balOk || !bal.length; bp.textContent = `${T('balancingN')}: ${bal.length}`; }
     const span = Math.max(0.05, hi - lo), b0 = lo - span * 0.6, b1 = hi + span * 0.4;
     const col = (x) => (x < 2.9 || x > 3.6 ? 'var(--bad)' : x < 3.05 || x > 3.45 ? 'var(--pv)' : 'var(--bat)');
     const stat = (k, val, unit) => `<div class="bst"><b>${esc(T(k))}</b><span>${val}<small>${unit}</small></span></div>`;
@@ -1572,7 +1575,7 @@ class GrowSolarPanel extends HTMLElement {
         `<span class="v">${isNum(x) ? f3(x) : '–'}</span><span class="n">#${i + 1}</span></div>`).join('')}</div>` +
       `<div class="blegend"><span><i style="background:var(--bat)"></i>3.05–3.45 V ${esc(T('lgNormal'))}</span><span><i style="background:var(--pv)"></i>${esc(T('lgEdge'))}</span>` +
       `<span><i style="background:var(--bad)"></i>${esc(T('lgBad'))}</span><span><i style="outline:2px solid var(--load);outline-offset:-2px"></i>${esc(T('lgHi'))}</span>` +
-      `<span><i style="outline:2px solid var(--pv);outline-offset:-2px"></i>${esc(T('lgLo'))}</span><span><b style="color:var(--grid);font-size:11px">BAL</b> ${esc(T('lgBal'))}</span>` +
+      `<span><i style="outline:2px solid var(--pv);outline-offset:-2px"></i>${esc(T('lgLo'))}</span>${balOk ? `<span><b style="color:var(--grid);font-size:11px">BAL</b> ${esc(T('lgBal'))}</span>` : ''}` +
       `<span>${esc(T('lgScale'))}: ${f3(b0)}–${f3(b1)} V (${esc(T('lgZoom'))})</span></div>`;
     const te = this.$('#c_temps');
     if (te) te.innerHTML = Object.entries(b.temps || {}).map(([k, id]) => [k, this.num(id)]).filter(([, x]) => isNum(x))
@@ -1592,7 +1595,7 @@ class GrowSolarPanel extends HTMLElement {
       const n = (id, d) => (isNum(this.num(id)) ? fmtNum(this.num(id), d) : null);
       const rows = [[T('packV'), n(b.voltage, 2) && n(b.voltage, 2) + ' V'], [T('current'), n(b.current, 1) && n(b.current, 1) + ' A'],
         [T('remFull'), n(b.remaining_ah, 1) && n(b.full_ah, 1) ? `${n(b.remaining_ah, 1)} / ${n(b.full_ah, 1)} Ah` : null],
-        [T('soc') + ' / ' + T('soh'), n(b.soc, 0) ? `${n(b.soc, 0)} % / ${n(b.soh, 0) || '–'} %` : null], [T('cycles'), n(b.cycles, 0)],
+        [n(b.soh, 0) ? T('soc') + ' / ' + T('soh') : T('soc'), n(b.soc, 0) ? `${n(b.soc, 0)} %${n(b.soh, 0) ? ` / ${n(b.soh, 0)} %` : ''}` : null], [T('cycles'), n(b.cycles, 0)],
         [T('bmsAddr'), at.address != null ? `${at.address} · ${at.protocol}` : null]].filter((r) => r[1]);
       kv.innerHTML = rows.map(([k, x]) => `<span>${esc(k)}</span><span>${esc(x)}</span>`).join('');
     }
