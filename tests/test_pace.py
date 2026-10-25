@@ -62,6 +62,22 @@ def test_alarm():
     assert al.protections == ["cell overvoltage"] and al.warnings == ["low capacity"]
 
 
+def test_real_v20_alarm():
+    # answer of the PACE BMS of a TowerX 16 kWh pack (RS485 next to CAN), charging at ~60 A
+    raw = b"~2002460060460002100000000000000000000000000000000005000000000000060000000006800000F066\r"
+    ver, adr, rtn, info = p.parse_frame(raw)
+    assert (ver, adr, rtn) == (0x20, 2, 0)
+    al = p.parse_alarm(info, 4, ver)
+    assert al.charge_mos and al.discharge_mos and al.protections == [] and al.faults == [] and al.warnings == []
+    al = p.parse_alarm(info[:-16] + "000000" + "02" + "02" + "00" + "00" + "40", 4, 0x20)
+    assert al.charge_mos and not al.discharge_mos and al.protections == ["cell undervoltage"] and al.faults == ["cell 15 fault"]
+
+
+def test_current_scale():
+    assert p.parse_analog(analog_info(cur=600), 0.1).current == 60.0
+    assert p.parse_analog(analog_info(cur=600)).current == 6.0 and p.parse_analog(analog_info(cur=600)).current_raw == 600
+
+
 def test_garbage():
     for info in ("", "00", "0001" + "FF" * 40):
         try:

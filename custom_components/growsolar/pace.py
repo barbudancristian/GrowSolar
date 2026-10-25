@@ -90,13 +90,14 @@ def _s16(v: int) -> int:
 class Analog:
     cells: list[float]                 # V
     temps: list[float]                 # °C
-    current: float                     # A, + charging
+    current: float                     # A, + charging (raw count x current_scale)
     voltage: float                     # V
     remaining_ah: float
     full_ah: float
     design_ah: float | None
     cycles: int | None
     offset: int = 0                    # where the cell count was found (kept for the alarm frame)
+    current_raw: int = 0               # signed count; 10 mA on most packs, 100 mA on some (see bms.py)
 
     @property
     def soc(self) -> float | None:
@@ -107,7 +108,7 @@ class Analog:
         return round(self.full_ah / self.design_ah * 100, 1) if self.design_ah else None
 
 
-def _analog_at(info: str, i: int) -> Analog:
+def _analog_at(info: str, i: int, scale: float) -> Analog:
     n = _u(info, i, 2)
     if not 4 <= n <= 32:
         raise ValueError
@@ -124,7 +125,8 @@ def _analog_at(info: str, i: int) -> Analog:
     if any(not -40 <= t <= 120 for t in temps):
         raise ValueError
     i += 4 * nt
-    current = _s16(_u(info, i)) / 100
+    craw = _s16(_u(info, i))
+    current = round(craw * scale, 2)
     voltage = _u(info, i + 4) / 1000
     remaining = _u(info, i + 8) / 100
     i += 12
@@ -145,15 +147,15 @@ def _analog_at(info: str, i: int) -> Analog:
             full = _u(info, i + 18, 6) / 1000
         except IndexError:
             pass
-    return Analog(cells, temps, current, voltage, remaining, full, design or None, cycles, offset=0)
+    return Analog(cells, temps, current, voltage, remaining, full, design or None, cycles, offset=0, current_raw=craw)
 
 
-def parse_analog(info: str) -> Analog:
+def parse_analog(info: str, current_scale: float = 0.01) -> Analog:
     """INFO of the 0x42 answer. The cell count sits after a data flag and, on most
     PACE firmwares, a pack number; both layouts are tried and checked against the pack voltage."""
     for off in (4, 2, 0, 6):
         try:
-            a = _analog_at(info, off)
+            a = _analog_at(info, off, current_scale)
         except (ValueError, IndexError):
             continue
         a.offset = off
@@ -178,8 +180,44 @@ def _bits(v: int, names: dict[int, str]) -> list[str]:
     return [n for b, n in names.items() if v >> b & 1]
 
 
-def parse_alarm(info: str, offset: int = 4) -> Alarm:
+# Pylontech-style status bytes (answers in protocol 0x20)
+PY_S1 = {7: "pack undervoltage", 6: "charge temperature", 5: "discharge temperature", 4: "discharge overcurrent",
+         2: "charge overcurrent", 1: "cell undervoltage", 0: "pack overvoltage"}
+WARN_LEVEL = {1: "low", 2: "high"}
+
+
+def parse_alarm_v20(info: str, offset: int = 4) -> Alarm:
+    """0x44 answer in protocol 0x20 (Pylontech layout): cell and temperature warnings, then
+    charge current, pack voltage and discharge current warnings and status bytes 1-5,
+    which are the last 8 bytes of INFO (some PACE packs put 2 more bytes before them)."""
+    i = offset
+    n = _u(info, i, 2)
+    if not 4 <= n <= 32:
+        raise FrameError("unknown alarm data layout")
+    cw = [_u(info, i + 2 + 2 * k, 2) for k in range(n)]
+    i += 2 + 2 * n
+    nt = _u(info, i, 2)
+    tw = [_u(info, i + 2 + 2 * k, 2) for k in range(nt)]
+    tail = info[-16:]
+    if len(info) - (i + 2 + 2 * nt) < 16:
+        raise FrameError("alarm frame too short")
+    chg_w, volt_w, dsg_w, s1, s2, s3, s4, s5 = (int(tail[2 * k:2 * k + 2], 16) for k in range(8))
+    warns = [f"cell {k + 1} voltage {WARN_LEVEL.get(v, hex(v))}" for k, v in enumerate(cw) if v]
+    warns += [f"temperature {k + 1} {WARN_LEVEL.get(v, hex(v))}" for k, v in enumerate(tw) if v]
+    warns += [f"{name} {WARN_LEVEL.get(v, hex(v))}" for name, v in
+              (("charge current", chg_w), ("pack voltage", volt_w), ("discharge current", dsg_w)) if v]
+    return Alarm(
+        cell_warn=cw, charge_mos=bool(s2 >> 1 & 1), discharge_mos=bool(s2 >> 2 & 1), current_limit=None,
+        balancing=[], protections=_bits(s1, PY_S1),
+        faults=[f"cell {k + 1} fault" for k in range(8) if s4 >> k & 1] + [f"cell {k + 9} fault" for k in range(8) if s5 >> k & 1],
+        warnings=warns, fully_charged=bool(s3 >> 3 & 1),
+    )
+
+
+def parse_alarm(info: str, offset: int = 4, ver: int = 0x25) -> Alarm:
     """INFO of the 0x44 answer, with the cell count at the same offset as in the analog frame."""
+    if ver == 0x20:
+        return parse_alarm_v20(info, offset)
     last: Exception | None = None
     for off in dict.fromkeys((offset, 4, 2, 0)):
         try:

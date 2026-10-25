@@ -127,9 +127,8 @@ async def _setup_bms(hass: HomeAssistant, entry: ConfigEntry, s: dict) -> dict |
 
     coord = PaceBmsCoordinator(hass, host, int(s.get(CONF_BMS_PORT) or DEFAULT_BMS_PORT))
     hass.data[DOMAIN]["bms"] = coord
+    # the sensor platform waits up to 20 s for the first answer, to create one sensor per cell and probe
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
-    # the first contact can take a while (protocol and address are searched), so it runs in the background
-    entry.async_create_background_task(hass, coord.async_refresh(), "growsolar_bms_first_refresh")
     reg = er.async_get(hass)
     ids = {
         e.unique_id[len("growsolar_bms_"):]: e.entity_id

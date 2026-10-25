@@ -1,6 +1,7 @@
 """Sensors of the PACE BMS read by GrowSolar (cells, temperatures, state)."""
 from __future__ import annotations
 
+import asyncio
 from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Any
@@ -16,6 +17,7 @@ from homeassistant.const import (
     UnitOfTemperature,
 )
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
@@ -89,6 +91,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
     coord: PaceBmsCoordinator | None = hass.data.get(DOMAIN, {}).get("bms")
     if coord is None:
         return
+    if not coord.data:
+        try:
+            await asyncio.wait_for(coord.async_refresh(), 20)
+        except asyncio.TimeoutError:
+            pass
     a = coord.data["analog"] if coord.data else None
     n_cells = len(a.cells) if a else DEFAULT_CELLS
     n_temps = len(a.temps) if a else len(TEMP_NAMES)
@@ -97,6 +104,13 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
     for i in range(n_temps):
         key = TEMP_NAMES[i] if i < len(TEMP_NAMES) else f"temp_{i + 1}"
         specs.append(Spec(f"temp_{key}", TEMP_LABELS.get(key, f"temperature {i + 1}"), _temp(i), C, SensorDeviceClass.TEMPERATURE, 1))
+    if a:
+        # a pack with fewer cells or probes than the defaults: drop the sensors it does not have
+        keep = {f"growsolar_bms_{s.key}" for s in specs}
+        reg = er.async_get(hass)
+        for e in list(reg.entities.values()):
+            if e.platform == DOMAIN and e.unique_id.startswith("growsolar_bms_") and e.unique_id not in keep:
+                reg.async_remove(e.entity_id)
     async_add_entities(BmsSensor(coord, entry, s) for s in specs)
 
 
@@ -134,7 +148,8 @@ class BmsSensor(CoordinatorEntity[PaceBmsCoordinator], SensorEntity):
         if self.spec.key != "state" or not self.coordinator.data:
             return None
         al: Alarm | None = self.coordinator.data.get("alarm")
-        attrs: dict[str, Any] = {"address": self.coordinator.adr, "protocol": f"{self.coordinator.ver or 0:#04x}"}
+        c = self.coordinator
+        attrs: dict[str, Any] = {"address": c.adr, "protocol": f"{c.rver or c.ver or 0:#04x}", "current_unit_a": c.scale}
         if al is not None:
             attrs.update(
                 charge_mos=al.charge_mos, discharge_mos=al.discharge_mos, current_limit=al.current_limit,
