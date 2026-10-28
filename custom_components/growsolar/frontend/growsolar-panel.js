@@ -7,12 +7,13 @@
  * SPDX-License-Identifier: MIT
  */
 (() => {
-const VERSION = '0.3.3';
+const VERSION = '0.3.4';
 
 /* ------------------------------------------------------------------ texts */
 const STR = {
   en: {
     dashboard: 'Dashboard', charts: 'Charts', totals: 'Totals', inverters: 'Inverters', battery: 'Battery',
+    vMeters: 'Meters', vFlow: 'Energy flow', fSav: 'Total savings', fMonth: 'Month', fToday: 'Today', fProduces: 'producing', fIdle: 'idle', fImport: 'import', fExport: 'export', fNoGrid: 'no grid', fHome: 'House load', fCharging: 'charging', fDischarging: 'discharging', fRest: 'resting',
     inverter: 'Inverter', solar: 'Solar PV', grid: 'Grid', load: 'Load', mode: 'mode',
     today: 'Today', peak: 'Peak', present: 'present', absent: 'absent', perHour: '%/h', socRate: 'Charge rate',
     cellsTitle: 'Cells · PACE BMS', cHigh: 'Highest', cLow: 'Lowest', cImb: 'Imbalance', cAvg: 'Average', temps: 'Temperatures',
@@ -54,6 +55,7 @@ const STR = {
   },
   ro: {
     dashboard: 'Dashboard', charts: 'Grafice', totals: 'Totaluri', inverters: 'Invertoare', battery: 'Baterie',
+    vMeters: 'Aparate', vFlow: 'Flux energetic', fSav: 'Economie totală', fMonth: 'Luna', fToday: 'Azi', fProduces: 'produce', fIdle: 'inactiv', fImport: 'import', fExport: 'export', fNoGrid: 'fără rețea', fHome: 'Consum casă', fCharging: 'se încarcă', fDischarging: 'se descarcă', fRest: 'repaus',
     inverter: 'Invertor', solar: 'Solar', grid: 'Rețea', load: 'Consum', mode: 'mod',
     today: 'Azi', peak: 'Vârf', present: 'prezentă', absent: 'absentă', perHour: '%/h', socRate: 'Ritm de încărcare',
     cellsTitle: 'Celule · PACE BMS', cHigh: 'Maximă', cLow: 'Minimă', cImb: 'Dezechilibru', cAvg: 'Medie', temps: 'Temperaturi',
@@ -244,6 +246,24 @@ nav button.on,.seg button.on{background:#2c4fa8;border-color:#4a6fd0;color:#fff}
 .tile .big.txt{font-size:19px;font-weight:650;line-height:1.25;white-space:normal}
 .tile .sub{color:var(--mut)}
 .tile .red{color:var(--bad)}.tile .grn{color:var(--bat)}
+.dots{display:flex;justify-content:center;gap:10px;margin-top:12px}
+.dot{width:10px;height:10px;border-radius:50%;border:0;padding:0;background:rgba(255,255,255,.22);cursor:pointer;transition:background .2s,transform .2s}
+.dot:hover{background:rgba(255,255,255,.45)}.dot.on{background:var(--tx);transform:scale(1.15)}
+.dot:focus-visible{outline:2px solid var(--load);outline-offset:3px}
+.flow>svg{display:block;width:100%;max-width:620px;height:auto;margin:14px auto 0}
+.flow .fv{font-size:15px;font-weight:700;fill:var(--tx);font-variant-numeric:tabular-nums}
+.flow .fl1{font-size:12px;fill:#c9d4ee}.flow .fl2{font-size:11px;fill:var(--mut)}
+.flow .fbox{fill:#1c3170;stroke:#4a6fd0;stroke-width:1.5}
+.flow .fbt{font-size:13px;font-weight:650;fill:#fff}.flow .fbs{font-size:11px;fill:#c9d4ee;font-variant-numeric:tabular-nums}
+.flow .fpct{font-size:10px;font-weight:700;fill:#8ff0bb}
+.flow .fsav rect{fill:rgba(53,208,127,.08);stroke:rgba(53,208,127,.45);stroke-width:1.2}
+.flow .fsav line{stroke:rgba(255,255,255,.12)}
+.flow .fsl{font-size:9.5px;letter-spacing:.12em;fill:#8ff0bb}.flow .fsb{font-size:20px;font-weight:700;fill:#fff;font-variant-numeric:tabular-nums}
+.flow .fss{font-size:8.5px;letter-spacing:.1em;fill:var(--mut)}.flow .fsm{font-size:12px;font-weight:650;fill:#fff;font-variant-numeric:tabular-nums}
+.fline{stroke:rgba(255,255,255,.18);stroke-width:2.2;stroke-dasharray:2 7;stroke-linecap:round}
+.fline.on{animation:fdash .9s linear infinite}.fline.on.rev{animation-direction:reverse}
+@keyframes fdash{to{stroke-dashoffset:-9}}
+@media (prefers-reduced-motion:reduce){.fline.on{animation:none}}
 .gauges{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin:18px auto 0;max-width:560px}
 .gauge{text-align:center;min-width:0}
 .gauge svg{display:block;width:100%;max-width:250px;height:auto;margin:0 auto;filter:drop-shadow(0 6px 14px rgba(0,0,0,.45))}
@@ -830,9 +850,16 @@ class GrowSolarPanel extends HTMLElement {
           <div class="tile"><div class="ic" id="d_gridic">${ICON.plug}</div><div class="tx"><b>${this.t('grid')}</b><span class="big" id="d_gridv">–</span><span class="sub" id="d_gridst"></span></div></div>
           <div class="tile link" data-go="battery"><div class="ic" id="d_batic">${ICON.battery(NaN)}</div><div class="tx"><b>${this.t('battery')}</b><span class="big" id="d_soc">–</span><span id="d_rate"></span><span class="sub" id="d_left"></span></div></div>
         </div>
-        <div class="gauges">
-          <div class="gauge" id="g_load"></div><div class="gauge" id="g_pv"></div>
-          <div class="gauge" id="g_grid"></div><div class="gauge" id="g_bat"></div>
+        <div class="dview">
+          <div class="gauges" id="d_gauges">
+            <div class="gauge" id="g_load"></div><div class="gauge" id="g_pv"></div>
+            <div class="gauge" id="g_grid"></div><div class="gauge" id="g_bat"></div>
+          </div>
+          <div class="flow" id="d_flow">${this._flowSvg()}</div>
+          <div class="dots" role="tablist">
+            <button class="dot" data-dv="gauges" role="tab" aria-label="${esc(this.t('vMeters'))}" title="${esc(this.t('vMeters'))}"></button>
+            <button class="dot" data-dv="flow" role="tab" aria-label="${esc(this.t('vFlow'))}" title="${esc(this.t('vFlow'))}"></button>
+          </div>
         </div>
       </section>
       <section class="card">
@@ -853,6 +880,110 @@ class GrowSolarPanel extends HTMLElement {
     this.$('#pv_prev').addEventListener('click', () => { this._pvDay--; this._loadPvDay(); });
     this.$('#pv_next').addEventListener('click', () => { if (this._pvDay < 0) { this._pvDay++; this._loadPvDay(); } });
     this._reload();
+    this._loadSavings();
+    // meters or energy flow: two dots below, the choice is remembered in this browser
+    let dv = 'gauges';
+    try { dv = localStorage.getItem('growsolar_dview') === 'flow' ? 'flow' : 'gauges'; } catch (e) { /* no storage */ }
+    const showDv = (v) => {
+      this.$('#d_gauges').style.display = v === 'flow' ? 'none' : '';
+      this.$('#d_flow').style.display = v === 'flow' ? '' : 'none';
+      this.shadowRoot.querySelectorAll('.dots .dot').forEach((b) => { const on = b.dataset.dv === v; b.classList.toggle('on', on); b.setAttribute('aria-selected', on); });
+    };
+    showDv(dv);
+    this.shadowRoot.querySelectorAll('.dots .dot').forEach((b) => b.addEventListener('click', () => {
+      showDv(b.dataset.dv);
+      try { localStorage.setItem('growsolar_dview', b.dataset.dv); } catch (e) { /* no storage */ }
+    }));
+  }
+  /* ---------- energy flow: solar on top, grid left, house right, battery below, the inverters in the middle */
+  _flowSvg() {
+    const T = (k) => this.t(k), n = Math.max(1, this.invs.length);
+    const model = this._map.source === 'manual' ? T('inverter') : 'SPF';
+    const node = (id, x, y, col, icon) => `<g id="${id}"><circle cx="${x}" cy="${y}" r="40" fill="#0f1e45" stroke="${col}" stroke-width="2.6"/>
+      <g transform="translate(${x - 14} ${y - 33}) scale(.58)">${icon}</g>
+      <text x="${x}" y="${y + 15}" text-anchor="middle" class="fv" id="${id}_v">–</text></g>`;
+    const lbl = (id, x, y, anchor, a, b) => `<text x="${x}" y="${y}" text-anchor="${anchor}" class="fl1">${esc(a)}</text><text x="${x}" y="${y + 14}" text-anchor="${anchor}" class="fl2" id="${id}">${esc(b)}</text>`;
+    const tower = `<svg viewBox="0 0 48 48" width="48" height="48" fill="none" stroke="${COL.grid}" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M17 6h14M15 15h18M24 6l-8 36M24 6l8 36M18 26l14 8M30 26l-14 8"/></svg>`;
+    const house = `<svg viewBox="0 0 48 48" width="48" height="48" fill="none" stroke="${COL.load}" stroke-width="2.6" stroke-linejoin="round"><path d="M8 22L24 8l16 14M13 18v22h22V18"/><path d="M20 40V29h8v11"/></svg>`;
+    const sun = ICON.sun.replace('<svg ', '<svg width="48" height="48" ');
+    const batt = `<svg viewBox="0 0 48 48" width="48" height="48" fill="none" stroke="#cfe0ff" stroke-width="2.4" stroke-linejoin="round"><rect x="8" y="14" width="30" height="20" rx="3"/><rect x="38" y="20" width="4" height="8" rx="1" fill="#cfe0ff"/><rect id="f_battfill" x="11" y="17" width="12" height="14" rx="1.5" fill="${COL.bat}" stroke="none"/></svg>`;
+    // ring around the battery node: state of charge
+    const R = 47, C = 2 * Math.PI * R;
+    return `<svg viewBox="0 0 520 360" role="img" aria-label="Energy flow">
+      <g class="fsav"><rect x="6" y="8" width="184" height="98" rx="12"/>
+        <text x="22" y="30" class="fsl">${esc(T('fSav').toUpperCase())}</text>
+        <text x="22" y="58" class="fsb" id="f_sav">–</text>
+        <line x1="22" y1="70" x2="174" y2="70"/>
+        <text x="22" y="85" class="fss">${esc(T('fMonth').toUpperCase())}</text><text x="106" y="85" class="fss">${esc(T('fToday').toUpperCase())}</text>
+        <text x="22" y="99" class="fsm" id="f_savm">–</text><text x="106" y="99" class="fsm" id="f_savd">–</text></g>
+      <line id="l_pv" x1="260" y1="114" x2="260" y2="160" class="fline"/>
+      <line id="l_grid" x1="120" y1="182" x2="210" y2="182" class="fline"/>
+      <line id="l_home" x1="310" y1="182" x2="400" y2="182" class="fline"/>
+      <line id="l_bat" x1="260" y1="204" x2="260" y2="246" class="fline"/>
+      ${node('f_pv', 260, 72, COL.pv, sun)}${lbl('f_pvst', 312, 64, 'start', T('solar'), T('fProduces'))}
+      ${node('f_grid', 78, 182, COL.grid, tower)}${lbl('f_gridst', 78, 240, 'middle', T('grid'), T('fImport'))}
+      ${node('f_home', 442, 182, COL.load, house)}${lbl('f_homest', 442, 240, 'middle', T('fHome'), '')}
+      <g><rect x="210" y="160" width="100" height="44" rx="10" class="fbox"/>
+        <text x="260" y="178" text-anchor="middle" class="fbt">${n} × ${esc(model)}</text>
+        <text x="260" y="195" text-anchor="middle" class="fbs" id="f_box">–</text></g>
+      <circle cx="260" cy="294" r="${R}" fill="none" stroke="rgba(255,255,255,.08)" stroke-width="5"/>
+      <circle id="f_ring" cx="260" cy="294" r="${R}" fill="none" stroke="${COL.pv}" stroke-width="5" stroke-linecap="round"
+        stroke-dasharray="0 ${C.toFixed(1)}" transform="rotate(-90 260 294)"/>
+      ${node('f_bat', 260, 294, '#2b3b66', batt)}
+      <text x="260" y="324" text-anchor="middle" class="fpct" id="f_soc">–</text>
+      ${lbl('f_batst', 316, 290, 'start', T('battery'), T('fRest'))}
+    </svg>`;
+  }
+  _liveFlow(pv, load, grid, bat, soc, gv) {
+    const fmtP = (v) => (!isNum(v) ? '–' : Math.abs(v) >= 1000 ? (v / 1000).toFixed(2) + ' kW' : Math.round(v) + ' W');
+    const set = (id, v) => { const e = this.$(id); if (e) e.textContent = v; };
+    const line = (id, power, forward, col) => {
+      const l = this.$(id); if (!l) return;
+      const on = isNum(power) && Math.abs(power) > 10;
+      l.setAttribute('class', 'fline' + (on ? ' on' + (forward ? '' : ' rev') : ''));
+      l.style.stroke = on ? col : '';
+    };
+    set('#f_pv_v', fmtP(pv)); set('#f_pvst', this.t(pv > 10 ? 'fProduces' : 'fIdle'));
+    line('#l_pv', pv, true, COL.pv);
+    const gridOff = isNum(gv) && gv < 100;
+    set('#f_grid_v', fmtP(grid));
+    set('#f_gridst', this.t(gridOff ? 'fNoGrid' : grid > 10 ? 'fImport' : grid < -10 ? 'fExport' : 'fIdle'));
+    line('#l_grid', grid, grid >= 0, COL.grid);
+    set('#f_home_v', fmtP(load)); line('#l_home', load, true, COL.load);
+    set('#f_box', fmtP(load));
+    // battery: + while charging (energy goes down to the battery)
+    set('#f_bat_v', fmtP(bat));
+    set('#f_batst', this.t(bat > 10 ? 'fCharging' : bat < -10 ? 'fDischarging' : 'fRest'));
+    line('#l_bat', bat, bat >= 0, bat >= 0 ? COL.bat : COL.pv);
+    set('#f_soc', isNum(soc) ? Math.round(soc) + '%' : '');
+    const ring = this.$('#f_ring');
+    if (ring && isNum(soc)) {
+      const C = 2 * Math.PI * 47, p = Math.max(0, Math.min(100, soc)) / 100;
+      ring.setAttribute('stroke-dasharray', `${(C * p).toFixed(1)} ${C.toFixed(1)}`);
+      ring.setAttribute('stroke', soc < 20 ? COL.bad : soc < 40 ? COL.pv : COL.bat);
+    }
+    const bf = this.$('#f_battfill');
+    if (bf && isNum(soc)) { bf.setAttribute('width', (Math.max(0, Math.min(100, soc)) / 100 * 24).toFixed(1)); bf.setAttribute('fill', soc < 20 ? COL.bad : soc < 40 ? COL.pv : COL.bat); }
+  }
+  /* savings box: total since the first recorded month, this month and today */
+  async _loadSavings() {
+    const price = this._cfg.price || 0, cur = this._cfg.currency || '';
+    const box = this.$('#d_flow .fsav'); if (!box) return;
+    if (!price) { box.style.display = 'none'; return; }
+    this._savT = Date.now();
+    const sav = (v) => (v && isNum(v.load) ? (v.load - (v.grid_in || 0)) * price : NaN);
+    try {
+      const now = new Date(), m0 = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
+      const months = await this._energyRows(new Date(2015, 0, 1).getTime(), new Date(now.getFullYear(), now.getMonth() + 1, 1).getTime(), 'month');
+      let total = 0, any = false, month = NaN;
+      for (const r of months) { const x = sav(r.values); if (isNum(x)) { total += x; any = true; if (r.t === m0) month = x; } }
+      const today = {};
+      for (const k of ['load', 'grid_in']) { try { today[k] = await this.energyToday(k); } catch (e) { today[k] = NaN; } }
+      const d = sav(today);
+      const f = (v, dec) => (isNum(v) ? v.toFixed(dec) + ' ' + cur : '–');
+      const set = (id, v) => { const e = this.$(id); if (e) e.textContent = v; };
+      set('#f_sav', any ? f(total, 2) : '–'); set('#f_savm', f(month, 2)); set('#f_savd', f(d, 2));
+    } catch (e) { /* keep the dashes */ }
   }
   /* analog panel meter (ST-96 style): pivot bottom-right, 90° scale from the left (min) to the top (max).
      signed meters have zero in the middle (like a cos φ meter): negative values on the lower-left side.
@@ -1064,6 +1195,8 @@ class GrowSolarPanel extends HTMLElement {
     this.gauge(this.$('#g_pv'), 'pv', 'SOLAR', pv, pvMax);
     this.gauge(this.$('#g_grid'), 'grid', 'GRID', grid, maxP, true, ['EXPORT', 'IMPORT', '#1f8a4c', '#c8202a']);
     this.gauge(this.$('#g_bat'), 'bat', 'BAT', bat, maxP, true, ['DISCHARGE', 'CHARGE', '#c8202a', '#1f8a4c'], { full: 10, step: 1, label: 2 });
+    this._liveFlow(pv, load, grid, bat, soc, gv);
+    if (Date.now() - (this._savT || 0) > 120000) this._loadSavings();
   }
 
   /* ================================================================= charts view */
