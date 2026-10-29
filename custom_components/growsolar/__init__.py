@@ -102,13 +102,16 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     entity_map["history_until"] = s.get(CONF_HISTORY_UNTIL) if entity_map.get("energy_history") else None
     entity_map["bms"] = await _setup_bms(hass, entry, s)
     title = s.get(CONF_TITLE) or "GrowSolar"
+    # the script is served with cache headers: a changed file must get a new URL
+    js = Path(__file__).parent / "frontend" / "growsolar-panel.js"
+    stamp = int(await hass.async_add_executor_job(lambda: js.stat().st_mtime))
     if PANEL_URL in hass.data.get("frontend_panels", {}):
         frontend.async_remove_panel(hass, PANEL_URL)
     await panel_custom.async_register_panel(
         hass,
         webcomponent_name=PANEL_ELEMENT,
         frontend_url_path=PANEL_URL,
-        module_url=f"{STATIC_URL}/growsolar-panel.js?v={VERSION}",
+        module_url=f"{STATIC_URL}/growsolar-panel.js?v={VERSION}-{stamp}",
         sidebar_title=title,
         sidebar_icon="mdi:solar-power-variant",
         require_admin=False,

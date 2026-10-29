@@ -651,9 +651,30 @@ class GrowSolarPanel extends HTMLElement {
       // the sensor was excluded from the recorder for a while), so that period is unknown
       if (isNum(row.change) && row.change >= 0) o[k] = (o[k] || 0) + row.change;
     } };
-    for (const k of keys) for (const id of en[k]) add(k, id, () => true);
-    // Solar Assistant rows that start before the switch; the dongles' counters start at the switch
+    if (!hkeys.length) {
+      for (const k of keys) for (const id of en[k]) add(k, id, () => true);
+      return out;
+    }
+    // Solar Assistant rows that start before the switch
     for (const k of hkeys) for (const id of eh[k]) add(k, id, (t) => t < hu);
+    // the current counters count only after the switch (a counter that already existed before it,
+    // e.g. an integration helper, would otherwise be added twice): periods that end before the
+    // switch are left out, and the period of the switch takes its hours after the switch
+    let cut = null;
+    for (const k of keys) for (const id of en[k]) for (const row of r[id] || []) {
+      const t = toMs(row.start), e = row.end != null ? toMs(row.end) : NaN;
+      if (isNum(e) && e <= hu) continue;
+      if (t < hu) { cut = { t, e: isNum(e) ? e : t1 }; continue; }
+      if (isNum(row.change) && row.change >= 0) { const o = (out[t] = out[t] || {}); o[k] = (o[k] || 0) + row.change; }
+    }
+    if (cut && period !== 'hour' && period !== '5minute') {
+      const h0 = Math.floor(hu / 3600e3) * 3600e3;
+      const rh = await this.wsMemo({ type: 'recorder/statistics_during_period', start_time: new Date(h0).toISOString(), end_time: new Date(cut.e).toISOString(),
+        statistic_ids: [...new Set(keys.flatMap((k) => en[k]))], period: 'hour', types: ['change'], units: { energy: 'kWh' } }, 3600e3);
+      for (const k of keys) for (const id of en[k]) for (const row of rh[id] || []) {
+        if (isNum(row.change) && row.change >= 0) { const o = (out[cut.t] = out[cut.t] || {}); o[k] = (o[k] || 0) + row.change; }
+      }
+    }
     return out;
   }
   /* energy of one key between two times, from the counters' history (works for both
