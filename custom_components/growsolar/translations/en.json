@@ -54,7 +54,7 @@
     "step": {
       "init": {
         "title": "GrowSolar",
-        "description": "Source: {source}. Inverters found: {detected}. Not found: {missing}.\n\nInverter order: which inverter of the source goes in each column. With Solar Assistant numbering them 1, 2, 3 by USB port, \"1,3,2\" shows its inverter 3 in the second column.",
+        "description": "Source: {source}. Inverters found: {detected}. Not found: {missing}.\n\nInverter order: which inverter of the source goes in each column. With Solar Assistant numbering them 1, 2, 3 by USB port, \"1,3,2\" shows its inverter 3 in the second column.\n\nPrices so far: {tariffs}.",
         "data": {
           "title": "Name in the sidebar",
           "inverters": "Number of inverters",
@@ -65,12 +65,16 @@
           "inverter_order": "Inverter order, e.g. 1,3,2 (optional)",
           "inverter_names": "Inverter names, e.g. L1,L2,L3 (optional)",
           "bms_host": "PACE BMS: RS485-to-Ethernet converter address (optional)",
-          "bms_port": "PACE BMS: converter TCP port"
+          "bms_port": "PACE BMS: converter TCP port",
+          "price_from": "The price applies from"
+        },
+        "data_description": {
+          "price_from": "When your tariff changes: the day the new price starts. Savings before that day keep the old price."
         }
       },
       "manual": {
         "title": "Extra entities",
-        "description": "Optional: entities that replace or add to the ones found automatically.",
+        "description": "Optional: entities that replace or add to the ones found automatically. DongleGrowatt: the inverters do not count the energy charged into the battery; choose a counter here (for example an Integral helper of the charging power).",
         "data": {
           "pv": "Solar power",
           "load": "Load power",

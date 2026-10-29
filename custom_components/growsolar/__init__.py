@@ -24,6 +24,7 @@ from .const import (
     CONF_NAMES,
     CONF_ORDER,
     CONF_PRICE,
+    CONF_TARIFFS,
     CONF_PV_KWP,
     CONF_SOURCE,
     CONF_TITLE,
@@ -35,6 +36,8 @@ from .const import (
     VERSION,
 )
 from .mapping import apply_order, build_map
+from .tariff import initial_tariffs
+from . import websocket as gs_ws
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -80,6 +83,7 @@ async def _register_static(hass: HomeAssistant) -> None:
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Register the GrowSolar panel."""
     await _register_static(hass)
+    gs_ws.async_register(hass)
     s = entry_settings(entry)
     entity_map = apply_order(
         build_map(
@@ -123,6 +127,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             "battery_kwh": float(s.get(CONF_BATTERY_KWH) or 0),
             "pv_kwp": float(s.get(CONF_PV_KWP) or 0),
             "price": float(s.get(CONF_PRICE) or 0),
+            # every price with the day it starts: savings of a day use the price of that day
+            "tariffs": s.get(CONF_TARIFFS) or initial_tariffs(s.get(CONF_PRICE)),
             "currency": s.get(CONF_CURRENCY) or "RON",
         },
     )

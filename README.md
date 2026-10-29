@@ -28,6 +28,10 @@ The sensors are found automatically by their unique ids, so it does not matter h
 
 **Totals**: three sections, each with a filled area chart (bars for the years) next to a table of load, solar, battery charged and discharged, grid used and exported, and the savings at your energy price: one month day by day, one year month by month (‹ › to move to another month or year) and every year since the counters started. Above each chart: the savings of that month, that year and the total since the first recorded month. The download button saves each table as a CSV file (same columns as Solar Assistant's export, in Wh).
 
+*History entered by hand*: the year-by-month and the all-years sections have two more buttons. The first downloads a CSV template (one row per month of the year shown, or per year, in kWh, already filled with what you entered before); fill in the values from your old monitoring or electricity bills and upload it with the second button (administrators only). Those months and years appear in the tables marked with ✎ and count in the savings; a value you enter replaces the one from the statistics for that month, and a row left completely empty removes what you entered for it. Savings are not in the template: GrowSolar calculates them.
+
+*Price changes*: in Configure, set the new price and the day it starts. Every day is calculated with the price in force on that day, so the savings before the change keep the old price. A month with a change inside is split by days.
+
 <img src="https://raw.githubusercontent.com/barbudancristian/GrowSolar/main/docs/img/totals.png" width="900" alt="Totals">
 
 **Inverters**: every value side by side for each inverter, with a total column: mode, temperature, bus voltage, load, AC output, PV per MPPT, battery, grid, priorities and serial number.

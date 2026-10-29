@@ -28,6 +28,10 @@ Senzorii sunt găsiți automat după ID-ul lor unic, deci nu contează cum i-ai 
 
 **Totaluri**: trei secțiuni, fiecare cu un grafic cu suprafețe colorate (bare pentru ani) lângă un tabel cu consumul, producția solară, energia încărcată și descărcată din baterie, energia luată din rețea și trimisă în rețea, plus economiile la prețul tău: o lună zi cu zi, un an lună cu lună (cu ‹ › treci la altă lună sau alt an) și toți anii de când există contoarele. Deasupra fiecărui grafic: economiile din acea lună, din acel an și totalul de la prima lună înregistrată. Butonul de descărcare salvează fiecare tabel ca fișier CSV (aceleași coloane ca exportul Solar Assistant, în Wh).
 
+*Istoric introdus manual*: secțiunile an lună cu lună și toți anii au încă două butoane. Primul descarcă un șablon CSV (câte un rând pentru fiecare lună a anului afișat, sau pentru fiecare an, în kWh, deja completat cu ce ai introdus înainte); completezi valorile din vechiul sistem de monitorizare sau din facturi și îl încarci cu al doilea buton (doar administratorii). Lunile și anii respectivi apar în tabele marcați cu ✎ și intră în economii; o valoare introdusă înlocuiește valoarea din statistici pentru luna respectivă, iar un rând lăsat complet gol șterge ce ai introdus pentru el. Economiile nu sunt în șablon: GrowSolar le calculează singur.
+
+*Schimbarea prețului*: în Configurare pui prețul nou și ziua de la care se aplică. Fiecare zi se calculează cu prețul valabil în acea zi, deci economiile de dinainte de schimbare rămân cu prețul vechi. O lună în care se schimbă prețul se împarte pe zile.
+
 <img src="https://raw.githubusercontent.com/barbudancristian/GrowSolar/main/docs/img/totals.png" width="900" alt="Totaluri">
 
 **Invertoare**: toate valorile, una lângă alta pentru fiecare invertor, cu o coloană de total: mod, temperatură, tensiune bus, consum, ieșire AC, PV pe fiecare MPPT, baterie, rețea, priorități și serie.

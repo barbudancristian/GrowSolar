@@ -23,6 +23,8 @@ from .const import (
     CONF_NAMES,
     CONF_ORDER,
     CONF_PRICE,
+    CONF_PRICE_FROM,
+    CONF_TARIFFS,
     CONF_PV_KWP,
     CONF_SOURCE,
     CONF_TITLE,
@@ -34,6 +36,7 @@ from .const import (
     SOURCES,
 )
 from .mapping import build_map, detect_inverters, missing
+from .tariff import initial_tariffs, price_at, update_tariffs
 
 # entities the user picks by hand for the "manual" source (all optional)
 MANUAL_FIELDS = {
@@ -52,8 +55,8 @@ MANUAL_FIELDS = {
 }
 
 
-def _settings_schema(defaults: dict, detected: int) -> vol.Schema:
-    return vol.Schema(
+def _settings_schema(defaults: dict, detected: int, price_from: bool = False) -> vol.Schema:
+    schema = vol.Schema(
         {
             vol.Required(CONF_TITLE, default=defaults.get(CONF_TITLE, "GrowSolar")): str,
             vol.Required(
@@ -86,6 +89,12 @@ def _settings_schema(defaults: dict, detected: int) -> vol.Schema:
                 selector.NumberSelectorConfig(min=1, max=65535, step=1, mode="box")
             ),
         }
+    )
+    if not price_from:
+        return schema
+    # a changed price applies from this day on; the savings before it keep the old price
+    return schema.extend(
+        {vol.Optional(CONF_PRICE_FROM, default=dt_util.now().date().isoformat()): selector.DateSelector()}
     )
 
 
@@ -144,6 +153,7 @@ class GrowSolarConfigFlow(ConfigFlow, domain=DOMAIN):
         if user_input is not None:
             user_input[CONF_INVERTERS] = int(user_input[CONF_INVERTERS])
             user_input[CONF_BMS_PORT] = int(user_input.get(CONF_BMS_PORT) or DEFAULT_BMS_PORT)
+            user_input[CONF_TARIFFS] = initial_tariffs(user_input.get(CONF_PRICE))
             self._data.update(user_input)
             if source == SOURCE_MANUAL:
                 return await self.async_step_manual()
@@ -190,14 +200,23 @@ class GrowSolarOptionsFlow(OptionsFlow):
             user_input.setdefault(CONF_NAMES, "")
             user_input.setdefault(CONF_BMS_HOST, "")
             user_input[CONF_BMS_PORT] = int(user_input.get(CONF_BMS_PORT) or DEFAULT_BMS_PORT)
+            # price history: the new price starts on the chosen day, older days keep their price
+            today = dt_util.now().date().isoformat()
+            start = str(user_input.pop(CONF_PRICE_FROM, None) or today)
+            tariffs = update_tariffs(current.get(CONF_TARIFFS), current.get(CONF_PRICE), float(user_input[CONF_PRICE]), start)
+            user_input[CONF_TARIFFS] = tariffs
+            now_price = price_at(tariffs, today)
+            if now_price is not None:
+                user_input[CONF_PRICE] = now_price
             self._data = {**current, **user_input}
             return await self.async_step_manual()
         entity_map = build_map(source, uids, int(current.get(CONF_INVERTERS) or 1), current.get(CONF_MANUAL))
         return self.async_show_form(
             step_id="init",
-            data_schema=_settings_schema(current, detected),
+            data_schema=_settings_schema(current, detected, price_from=True),
             description_placeholders={
                 "source": source,
+                "tariffs": ", ".join(f"{t['from']}: {t['price']}" for t in current.get(CONF_TARIFFS) or initial_tariffs(current.get(CONF_PRICE))),
                 "detected": str(detected),
                 "missing": ", ".join(missing(entity_map)) or "-",
             },

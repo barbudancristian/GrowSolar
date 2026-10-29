@@ -54,7 +54,7 @@
     "step": {
       "init": {
         "title": "GrowSolar",
-        "description": "Sursa: {source}. Invertoare găsite: {detected}. Negăsite: {missing}.\n\nOrdinea invertoarelor: ce invertor din sursă apare în fiecare coloană. Dacă Solar Assistant le numerotează 1, 2, 3 după portul USB, „1,3,2” pune invertorul lui 3 în a doua coloană.",
+        "description": "Sursa: {source}. Invertoare găsite: {detected}. Negăsite: {missing}.\n\nOrdinea invertoarelor: ce invertor din sursă apare în fiecare coloană. Dacă Solar Assistant le numerotează 1, 2, 3 după portul USB, „1,3,2” pune invertorul lui 3 în a doua coloană.\n\nPrețuri până acum: {tariffs}.",
         "data": {
           "title": "Nume în bara laterală",
           "inverters": "Număr de invertoare",
@@ -65,12 +65,16 @@
           "inverter_order": "Ordinea invertoarelor, de ex. 1,3,2 (opțional)",
           "inverter_names": "Numele invertoarelor, de ex. L1,L2,L3 (opțional)",
           "bms_host": "PACE BMS: adresa convertorului RS485-Ethernet (opțional)",
-          "bms_port": "PACE BMS: portul TCP al convertorului"
+          "bms_port": "PACE BMS: portul TCP al convertorului",
+          "price_from": "Prețul se aplică de la data"
+        },
+        "data_description": {
+          "price_from": "La schimbarea tarifului: alege ziua de la care se aplică prețul nou. Economiile de dinainte rămân calculate cu prețul vechi."
         }
       },
       "manual": {
         "title": "Entități suplimentare",
-        "description": "Opțional: entități care le înlocuiesc sau le completează pe cele găsite automat.",
+        "description": "Opțional: entități care le înlocuiesc sau le completează pe cele găsite automat. DongleGrowatt: invertoarele nu numără energia încărcată în baterie; alege aici un contor (de ex. un ajutor Integrală pe puterea de încărcare).",
         "data": {
           "pv": "Putere solară",
           "load": "Consum",

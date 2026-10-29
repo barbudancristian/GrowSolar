@@ -14,7 +14,7 @@ jobs:
         with:
           python-version: '3.13'
       - name: Entity mapping tests
-        run: python tests/test_mapping.py && python tests/test_pace.py
+        run: python tests/test_mapping.py && python tests/test_pace.py && python tests/test_tariff.py
       - name: Panel syntax
         run: node --check custom_components/growsolar/frontend/growsolar-panel.js
 

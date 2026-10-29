@@ -1,7 +1,7 @@
 """Constants for GrowSolar."""
 
 DOMAIN = "growsolar"
-VERSION = "0.3.5"
+VERSION = "0.3.6"
 
 PANEL_URL = "growsolar"
 STATIC_URL = "/growsolar_static"
@@ -12,6 +12,8 @@ CONF_INVERTERS = "inverters"
 CONF_BATTERY_KWH = "battery_kwh"
 CONF_PV_KWP = "pv_kwp"
 CONF_PRICE = "price"
+CONF_PRICE_FROM = "price_from"
+CONF_TARIFFS = "tariffs"
 CONF_CURRENCY = "currency"
 CONF_TITLE = "title"
 CONF_MANUAL = "manual"
