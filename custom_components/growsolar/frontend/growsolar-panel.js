@@ -699,6 +699,9 @@ class GrowSolarPanel extends HTMLElement {
     if (this._wxCache && Date.now() - this._wxCache.t < 30 * 60e3) return this._wxCache.v;
     let v = null;
     const id = this.sys.weather || Object.keys(this._hass.states).find((e) => e.startsWith('weather.'));
+    const st = id ? this._hass.states[id] : null;
+    // not loaded yet (Home Assistant starting): ask again on the next refresh instead of logging an error
+    if (!st || st.state === 'unavailable' || st.state === 'unknown') return null;
     if (id) {
       try {
         const r = await this.ws({ type: 'call_service', domain: 'weather', service: 'get_forecasts', service_data: { type: 'hourly' }, target: { entity_id: id }, return_response: true });
