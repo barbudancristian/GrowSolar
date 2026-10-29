@@ -10,6 +10,7 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import entity_registry as er
 import homeassistant.helpers.config_validation as cv
+from homeassistant.helpers.storage import Store
 
 from .const import (
     CONF_BATTERY_KWH,
@@ -29,6 +30,7 @@ from .const import (
     DOMAIN,
     PANEL_ELEMENT,
     PANEL_URL,
+    SOURCE_DONGLE,
     STATIC_URL,
     VERSION,
 )
@@ -87,6 +89,15 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         s.get(CONF_ORDER),
         s.get(CONF_NAMES),
     )
+    # the Solar Assistant energy counters are remembered: their long-term statistics keep the
+    # history before the switch even after the old Solar Assistant entities are deleted
+    store = Store(hass, 1, f"{DOMAIN}.energy_history")
+    saved = await store.async_load() or {}
+    if entity_map.get("energy_history"):
+        if saved.get("energy_history") != entity_map["energy_history"]:
+            await store.async_save({"energy_history": entity_map["energy_history"]})
+    elif s[CONF_SOURCE] == SOURCE_DONGLE and saved.get("energy_history"):
+        entity_map["energy_history"] = saved["energy_history"]
     # energy before this moment comes from the Solar Assistant counters (moved to the dongles)
     entity_map["history_until"] = s.get(CONF_HISTORY_UNTIL) if entity_map.get("energy_history") else None
     entity_map["bms"] = await _setup_bms(hass, entry, s)
