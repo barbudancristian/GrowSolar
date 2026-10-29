@@ -7,7 +7,10 @@
  * SPDX-License-Identifier: MIT
  */
 (() => {
-const VERSION = '0.3.4';
+const VERSION = '0.3.5';
+
+/* data shared by every panel instance of this page: switching panels and coming back is instant */
+const STORE = window.__growsolarStore = window.__growsolarStore || { raw: new Map(), stats: new Map(), memo: new Map() };
 
 /* ------------------------------------------------------------------ texts */
 const STR = {
@@ -516,21 +519,109 @@ class GrowSolarPanel extends HTMLElement {
 
   /* ================================================================= data */
   async ws(msg) { return this._hass.callWS(msg); }
+  /* the same request already on its way is not sent twice; a result can be kept for ttl ms */
+  wsMemo(msg, ttl = 0) {
+    const k = JSON.stringify(msg), now = Date.now(), c = STORE.memo.get(k);
+    if (c && (c.p || now - c.t < ttl)) return c.p || Promise.resolve(c.v);
+    const p = this.ws(msg).then((v) => { STORE.memo.set(k, { t: Date.now(), v }); return v; },
+      (e) => { STORE.memo.delete(k); throw e; });
+    STORE.memo.set(k, { t: now, p });
+    if (STORE.memo.size > 200) for (const [key, v] of STORE.memo) { if (!v.p && Date.now() - v.t > 3600e3) STORE.memo.delete(key); }
+    return p;
+  }
 
-  /* {id: [[t, v], ...]} from history (short ranges) or 5-minute / hourly statistics (long ranges) */
+  /* {id: [[t, v], ...]} for a time window.
+     Fast path: the recorder's 5-minute statistics (288 rows per day instead of thousands of raw
+     states), completed with the raw states after the last compiled 5 minutes. Raw history only for
+     short windows (<= 2 h) and for entities without statistics. Everything is cached for the whole
+     page (across panel switches) and later calls only fetch what is new. */
   async history(ids, t0, t1) {
     ids = [...new Set(ids.filter(Boolean))];
     if (!ids.length) return {};
-    const out = {};
+    const now = Date.now();
     if (t1 - t0 > 3 * DAY) {
-      const r = await this.ws({ type: 'recorder/statistics_during_period', start_time: new Date(t0).toISOString(), end_time: new Date(t1).toISOString(),
-        statistic_ids: ids, period: t1 - t0 > 20 * DAY ? 'hour' : '5minute', types: ['mean'] });
+      const r = await this.wsMemo({ type: 'recorder/statistics_during_period', start_time: new Date(t0).toISOString(), end_time: new Date(t1).toISOString(),
+        statistic_ids: ids, period: t1 - t0 > 20 * DAY ? 'hour' : '5minute', types: ['mean'] }, t1 < now - 3600e3 ? 6 * 3600e3 : 5 * 60e3);
+      const out = {};
       for (const id of ids) out[id] = (r[id] || []).map((x) => [toMs(x.start), x.mean]);
       return out;
     }
-    const r = await this.ws({ type: 'history/history_during_period', start_time: new Date(t0).toISOString(), end_time: new Date(t1).toISOString(),
-      entity_ids: ids, minimal_response: true, no_attributes: true, significant_changes_only: false });
-    for (const id of ids) out[id] = (r[id] || []).map((x) => [((x.lu ?? x.lc) || 0) * 1000, parseFloat(x.s)]);
+    if (t1 - t0 <= 2 * 3600e3 || t0 < now - 9.5 * DAY) return this.rawHistory(ids, t0, t1);
+    const st = await this.stats5(ids, t0, t1), out = {}, tail = {}, raw = [];
+    for (const id of ids) {
+      const c = st[id];
+      if (!c || !c.pts.length) { raw.push(id); continue; }
+      if (c.end < t1) (tail[c.end] = tail[c.end] || []).push(id);
+    }
+    const parts = await Promise.all([
+      raw.length ? this.rawHistory(raw, t0, t1) : {},
+      ...Object.entries(tail).map(([from, list]) => this.rawHistory(list, Math.max(t0, +from), t1))
+    ]);
+    for (const id of ids) {
+      const c = st[id];
+      if (!c || !c.pts.length) { out[id] = parts[0][id] || []; continue; }
+      const pts = c.pts.filter((p) => p[0] < t1);
+      const more = parts.slice(1).map((h) => h[id]).find(Boolean) || [];
+      out[id] = pts.concat(more.filter((p) => p[0] >= c.end));
+    }
+    return out;
+  }
+  /* 5-minute means, cached per entity; only the new 5-minute blocks are asked for */
+  async stats5(ids, t0, t1) {
+    const now = Date.now(), groups = {}, out = {};
+    for (const id of ids) {
+      const c = STORE.stats.get(id);
+      if (c && c.none && now - c.t < 3600e3) { out[id] = c; continue; }          // no statistics for it
+      if (c && !c.none && c.from <= t0) {
+        out[id] = c;
+        if (c.end < Math.min(t1, now - 330e3) && now - c.t > 45e3) (groups[c.end] = groups[c.end] || []).push(id);
+      } else (groups['f' + t0] = groups['f' + t0] || []).push(id);
+    }
+    await Promise.all(Object.entries(groups).map(async ([k, list]) => {
+      const fresh = k[0] === 'f', from = fresh ? t0 : +k;
+      const r = await this.wsMemo({ type: 'recorder/statistics_during_period', start_time: new Date(from).toISOString(),
+        end_time: new Date(Math.max(t1, now)).toISOString(), statistic_ids: list, period: '5minute', types: ['mean'] });
+      for (const id of list) {
+        const rows = (r[id] || []).filter((x) => isNum(x.mean)).map((x) => [toMs(x.start), x.mean]);
+        const old = fresh ? null : STORE.stats.get(id);
+        if (!old && !rows.length) { const c = { none: true, t: Date.now(), pts: [] }; STORE.stats.set(id, c); out[id] = c; continue; }
+        const pts = old ? old.pts.concat(rows.filter((p) => p[0] + 150e3 >= old.end).map((p) => [p[0] + 150e3, p[1]])) : rows.map((p) => [p[0] + 150e3, p[1]]);
+        const end = rows.length ? rows[rows.length - 1][0] + 300e3 : (old ? old.end : from);
+        const c = { from: old ? old.from : from, end, pts, t: Date.now() };
+        // two windows loaded at the same time: keep the one that reaches further back
+        const cur = STORE.stats.get(id);
+        if (fresh && cur && !cur.none && cur.from < c.from && cur.end >= c.end - 300e3) { out[id] = cur; continue; }
+        STORE.stats.set(id, c); out[id] = c;
+      }
+    }));
+    return out;
+  }
+  /* raw states, cached per entity; a later call for the same window only fetches the new states */
+  async rawHistory(ids, t0, t1) {
+    const now = Date.now(), groups = {}, out = {};
+    for (const id of ids) {
+      const c = STORE.raw.get(id);
+      if (c && c.from <= t0 && c.to >= t0) { if (t1 > c.to + 1000 && !(t1 >= now - 1000 && now - c.t < 3000)) (groups[c.to] = groups[c.to] || []).push(id); }
+      else (groups['f' + t0] = groups['f' + t0] || []).push(id);
+    }
+    await Promise.all(Object.entries(groups).map(async ([k, list]) => {
+      const fresh = k[0] === 'f', from = fresh ? t0 : +k, to = Math.min(t1, Date.now());
+      const r = await this.wsMemo({ type: 'history/history_during_period', start_time: new Date(from).toISOString(), end_time: new Date(to).toISOString(),
+        entity_ids: list, minimal_response: true, no_attributes: true, significant_changes_only: false });
+      for (const id of list) {
+        const rows = (r[id] || []).map((x) => [((x.lu ?? x.lc) || 0) * 1000, parseFloat(x.s)]);
+        const old = fresh ? null : STORE.raw.get(id);
+        const c = old ? { from: old.from, to, pts: old.pts.concat(rows.filter((p) => p[0] > old.to)), t: Date.now() } : { from, to, pts: rows, t: Date.now() };
+        const cur = STORE.raw.get(id);
+        if (fresh && cur && cur.from < c.from && cur.to >= c.to - 5000) continue;
+        STORE.raw.set(id, c);
+      }
+    }));
+    for (const id of ids) {
+      const c = STORE.raw.get(id); if (!c) { out[id] = []; continue; }
+      let i = 0; while (i < c.pts.length && c.pts[i][0] < t0) i++;
+      out[id] = c.pts.slice(Math.max(0, i - 1)).filter((p) => p[0] <= t1);
+    }
     return out;
   }
   /* daily or monthly change of the energy counters (kWh): {start_ms: {pv, load, ...}} */
@@ -548,8 +639,9 @@ class GrowSolarPanel extends HTMLElement {
     const hkeys = Object.keys(eh).filter((k) => eh[k] && eh[k].length);
     const ids = [...new Set([...keys.flatMap((k) => en[k]), ...hkeys.flatMap((k) => eh[k])])];
     if (!ids.length) return {};
-    const r = await this.ws({ type: 'recorder/statistics_during_period', start_time: new Date(t0).toISOString(), end_time: new Date(t1).toISOString(),
-      statistic_ids: ids, period, types: ['change'], units: { energy: 'kWh' } });
+    // closed periods do not change any more: keep them for an hour; the current one for 5 minutes
+    const r = await this.wsMemo({ type: 'recorder/statistics_during_period', start_time: new Date(t0).toISOString(), end_time: new Date(t1).toISOString(),
+      statistic_ids: ids, period, types: ['change'], units: { energy: 'kWh' } }, t1 <= startOfDay(Date.now()) ? 3600e3 : 5 * 60e3);
     const out = {};
     const add = (k, id, keep) => { for (const row of r[id] || []) {
       const t = toMs(row.start);
@@ -1196,7 +1288,7 @@ class GrowSolarPanel extends HTMLElement {
     this.gauge(this.$('#g_grid'), 'grid', 'GRID', grid, maxP, true, ['EXPORT', 'IMPORT', '#1f8a4c', '#c8202a']);
     this.gauge(this.$('#g_bat'), 'bat', 'BAT', bat, maxP, true, ['DISCHARGE', 'CHARGE', '#c8202a', '#1f8a4c'], { full: 10, step: 1, label: 2 });
     this._liveFlow(pv, load, grid, bat, soc, gv);
-    if (Date.now() - (this._savT || 0) > 120000) this._loadSavings();
+    if (Date.now() - (this._savT || 0) > 600000) this._loadSavings();
   }
 
   /* ================================================================= charts view */
@@ -1288,7 +1380,8 @@ class GrowSolarPanel extends HTMLElement {
   async _loadCharts() {
     const box = this.$('#charts'); if (!box) return;
     this._lastLoad = Date.now();
-    const [t0, t1] = this._win(), n = Math.min(600, Math.max(120, Math.round((t1 - t0) / 60e3)));
+    // short windows: one bucket per minute from the raw states; longer ones: the 5-minute statistics
+    const [t0, t1] = this._win(), n = t1 - t0 <= 2 * 3600e3 ? Math.min(600, Math.max(60, Math.round((t1 - t0) / 60e3))) : Math.min(600, Math.max(36, Math.round((t1 - t0) / 300e3)));
     const lbl = this.$('#r_label');
     if (lbl) lbl.textContent = new Date(t0).toLocaleString(this.lang, { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) + ' – ' + new Date(t1).toLocaleString(this.lang, { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
     const defs = this._chartDefs();

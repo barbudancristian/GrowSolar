@@ -70,7 +70,7 @@ async def _register_static(hass: HomeAssistant) -> None:
         return
     path = Path(__file__).parent / "frontend"
     await hass.http.async_register_static_paths(
-        [StaticPathConfig(STATIC_URL, str(path), cache_headers=False)]
+        [StaticPathConfig(STATIC_URL, str(path), cache_headers=True)]
     )
     hass.data[f"{DOMAIN}_static"] = True
 
